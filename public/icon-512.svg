@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="crestPurple512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#58164b" />
+      <stop offset="50%" stop-color="#4a154b" />
+      <stop offset="100%" stop-color="#2a062c" />
+    </linearGradient>
+    <linearGradient id="crestGold512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+    <filter id="shadow512" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity="0.55" />
+    </filter>
+  </defs>
+
+  <!-- Canvas Background -->
+  <rect width="512" height="512" rx="112" fill="#0d0d0f" />
+  
+  <!-- Outer Shield Shadow & Base -->
+  <g transform="translate(256, 246)" filter="url(#shadow512)">
+    <!-- Heraldic Shield Path -->
+    <path d="M-165,-190 L165,-190 C165,-190 173,26 0,182 C-173,26 -165,-190 -165,-190 Z" fill="url(#crestPurple512)" stroke="url(#crestGold512)" stroke-width="12" />
+    <!-- Inner Shield Inset Border -->
+    <path d="M-147,-172 L147,-172 C147,-172 153,16 0,155 C-153,16 -147,-172 -147,-172 Z" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-opacity="0.8" />
+
+    <!-- Shield Division Chevron / Division Line -->
+    <path d="M-155,-54 L0,26 L155,-54" fill="none" stroke="url(#crestGold512)" stroke-width="6.5" />
+
+    <!-- Top Section: Open Book / Crest Lamp of Learning -->
+    <g transform="translate(0, -118)">
+      <!-- Open Book pages -->
+      <path d="M-58,-22 C-38,-27 -16,-27 0,-18 C16,-27 38,-27 58,-22 L58,22 C38,16 16,16 0,24 C-16,16 -38,16 -58,22 Z" fill="#ffffff" stroke="#b45309" stroke-width="3" />
+      <line x1="0" y1="-18" x2="0" y2="24" stroke="#b45309" stroke-width="4" />
+      <!-- Book page line accents -->
+      <line x1="-42" y1="-5" x2="-10" y2="-5" stroke="#58164b" stroke-width="2.5" />
+      <line x1="-42" y1="5" x2="-10" y2="5" stroke="#58164b" stroke-width="2.5" />
+      <line x1="10" y1="-5" x2="42" y2="-5" stroke="#58164b" stroke-width="2.5" />
+      <line x1="10" y1="5" x2="42" y2="5" stroke="#58164b" stroke-width="2.5" />
+      <!-- Gold star / flame above book -->
+      <circle cx="0" cy="-36" r="9" fill="url(#crestGold512)" />
+    </g>
+
+    <!-- Lower Section: Crossed Field Hockey Sticks and Ball -->
+    <g transform="translate(0, 42)">
+      <!-- Left Stick -->
+      <path d="M-74,-38 L32,64 C42,74 58,76 68,66 C76,56 74,42 60,32 L-48,-48 Z" fill="url(#crestGold512)" />
+      <!-- Right Stick -->
+      <path d="M74,-38 L-32,64 C-42,74 -58,76 -68,66 C-76,56 -74,42 -60,32 L48,-48 Z" fill="#ffffff" fill-opacity="0.95" />
+      <!-- Hockey Ball -->
+      <circle cx="0" cy="22" r="16" fill="#ffffff" stroke="#b45309" stroke-width="4" />
+      <circle cx="-4" cy="18" r="4" fill="#f59e0b" />
+    </g>
+
+    <!-- Foundation Year Inset -->
+    <text x="0" y="-32" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="900" fill="url(#crestGold512)" letter-spacing="3">
+      1893
+    </text>
+  </g>
+
+  <!-- Motto Ribbon at Base: DIXI CUSTODIAM -->
+  <g transform="translate(256, 436)">
+    <!-- Ribbon shape -->
+    <path d="M-180,0 L-148,-18 L-128,-11 L128,-11 L148,-18 L180,0 L154,24 L122,16 L-122,16 L-154,24 Z" fill="url(#crestGold512)" stroke="#78350f" stroke-width="2.5" />
+    <text x="0" y="6.5" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="17" font-weight="900" fill="#2a062c" letter-spacing="3.2">
+      DIXI CUSTODIAM
+    </text>
+  </g>
+
+  <!-- Top Title Arch -->
+  <text x="256" y="64" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="28" font-weight="900" fill="#ffffff" letter-spacing="5">
+    OLD ALEXANDRA
+  </text>
+  <text x="256" y="90" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="17" font-weight="800" fill="url(#crestGold512)" letter-spacing="4.5">
+    HOCKEY CLUB
+  </text>
+</svg>

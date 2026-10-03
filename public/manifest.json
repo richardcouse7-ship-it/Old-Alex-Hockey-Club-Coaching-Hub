@@ -1,0 +1,38 @@
+{
+  "name": "Old Alexandra HC — Coaching Hub",
+  "short_name": "Old Alex Hub",
+  "description": "Field hockey coaching hub for Old Alex Hockey Club featuring Sunday timetable management, pitch sector allocations, drill library, offline pitch mode, and WhatsApp exports.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#d7282f",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/crest.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/crest.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["sports", "productivity"]
+}
