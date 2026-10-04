@@ -128,9 +128,13 @@ export const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="import-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in overflow-y-auto cursor-pointer"
+      onClick={onClose}
     >
-      <div className="bg-neutral-900 border border-neutral-750 rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-auto">
+      <div
+        className="bg-neutral-900 border border-neutral-750 rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-auto cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-neutral-800 bg-neutral-950/80">
           <div className="flex items-center gap-3">

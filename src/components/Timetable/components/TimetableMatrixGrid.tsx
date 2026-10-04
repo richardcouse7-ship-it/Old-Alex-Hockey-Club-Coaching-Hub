@@ -161,15 +161,23 @@ export const TimetableMatrixGrid: React.FC<TimetableMatrixGridProps> = ({
                     (s) => s.timeSlot === timeBand && s.pitchSectorId === sec.id
                   );
 
-                  if (!slot) {
+                    if (!slot) {
                     // Empty / Vacant Turf Slot: Interactive Dotted Slot
                     return (
                       <div
                         key={sec.id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() =>
                           onAddCustomSlot({ timeSlot: timeBand, pitchSectorId: sec.id })
                         }
-                        className="group relative p-2.5 border-r border-neutral-800/80 last:border-r-0 bg-neutral-950/30 hover:bg-neutral-900/60 transition-all cursor-pointer flex flex-col items-center justify-center text-center"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onAddCustomSlot({ timeSlot: timeBand, pitchSectorId: sec.id });
+                          }
+                        }}
+                        className="group relative p-2.5 border-r border-neutral-800/80 last:border-r-0 bg-neutral-950/30 hover:bg-neutral-900/60 transition-all cursor-pointer flex flex-col items-center justify-center text-center active:scale-95 select-none"
                         title={`Add session at ${timeBand} on ${sec.code}`}
                       >
                         <div className="w-full h-full border-2 border-dashed border-neutral-800/80 group-hover:border-red-500/60 rounded-xl p-3 flex flex-col items-center justify-center transition-colors">
@@ -198,8 +206,16 @@ export const TimetableMatrixGrid: React.FC<TimetableMatrixGridProps> = ({
                   return (
                     <div
                       key={sec.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => onSelectSlot(slot)}
-                      className={`group relative p-2.5 border-r border-neutral-800/80 last:border-r-0 bg-neutral-900 hover:bg-neutral-850 hover:border-red-500 transition-all cursor-pointer flex flex-col justify-between ${
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelectSlot(slot);
+                        }
+                      }}
+                      className={`group relative p-2.5 border-r border-neutral-800/80 last:border-r-0 bg-neutral-900 hover:bg-neutral-850 hover:border-red-500 transition-all cursor-pointer flex flex-col justify-between active:scale-95 select-none ${
                         hasConflict ? 'ring-1 ring-amber-600/80 bg-neutral-900/95' : ''
                       }`}
                     >

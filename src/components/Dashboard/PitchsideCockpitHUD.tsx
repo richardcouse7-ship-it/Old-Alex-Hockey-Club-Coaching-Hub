@@ -246,7 +246,7 @@ export const PitchsideCockpitHUD: React.FC<PitchsideCockpitHUDProps> = ({
             <button
               type="button"
               onClick={handleToggleLiveMode}
-              className={`min-h-[44px] px-3 py-1.5 rounded-lg text-xs font-bold font-mono-data flex items-center gap-1.5 transition-all ${
+              className={`min-h-[44px] px-3 py-1.5 rounded-lg text-xs font-bold font-mono-data flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
                 isLiveClock
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'bg-neutral-800 text-neutral-300 hover:text-white'
@@ -415,7 +415,7 @@ export const PitchsideCockpitHUD: React.FC<PitchsideCockpitHUDProps> = ({
                   <button
                     type="button"
                     onClick={() => onSelectSlot(p1NowSlot)}
-                    className="min-h-[48px] px-3.5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-750 text-white text-xs font-semibold flex items-center justify-center gap-1 transition-all"
+                    className="min-h-[48px] px-3.5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-750 text-white text-xs font-semibold flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
                     title="View slot details"
                   >
                     <span>Details</span>
@@ -523,7 +523,7 @@ export const PitchsideCockpitHUD: React.FC<PitchsideCockpitHUDProps> = ({
                   <button
                     type="button"
                     onClick={() => onSelectSlot(p2NowSlot)}
-                    className="min-h-[48px] px-3.5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-750 text-white text-xs font-semibold flex items-center justify-center gap-1 transition-all"
+                    className="min-h-[48px] px-3.5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-750 text-white text-xs font-semibold flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
                     title="View slot details"
                   >
                     <span>Details</span>
@@ -544,7 +544,7 @@ export const PitchsideCockpitHUD: React.FC<PitchsideCockpitHUDProps> = ({
             <button
               type="button"
               onClick={() => onNavigateTab('timetable')}
-              className="text-xs text-red-400 hover:text-white font-semibold flex items-center gap-1 transition-colors"
+              className="text-xs text-red-400 hover:text-white font-semibold flex items-center gap-1 transition-all active:scale-95"
             >
               <span>View Full Timetable</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -560,8 +560,17 @@ export const PitchsideCockpitHUD: React.FC<PitchsideCockpitHUDProps> = ({
                 return (
                   <div
                     key={nextSlot.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onSelectSlot(nextSlot)}
-                    className="p-3.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 cursor-pointer transition-all flex flex-col justify-between gap-2"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectSlot(nextSlot);
+                      }
+                    }}
+                    className="p-3.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 cursor-pointer transition-all active:scale-95 select-none flex flex-col justify-between gap-2"
+                    aria-label={`Upcoming session ${nextSlot.ageGroupId} ${nextSlot.sessionTitle}`}
                   >
                     <div>
                       <div className="flex items-center justify-between text-xs mb-1.5">
@@ -617,12 +626,21 @@ export const PitchsideCockpitHUD: React.FC<PitchsideCockpitHUDProps> = ({
                 return (
                   <div
                     key={away.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onSelectSlot(away)}
-                    className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectSlot(away);
+                      }
+                    }}
+                    className={`p-3 rounded-xl border text-xs cursor-pointer transition-all active:scale-95 select-none ${
                       isActive
                         ? 'bg-sky-950/40 border-sky-800/80 text-sky-100'
                         : 'bg-black/60 border-neutral-800 text-neutral-300 hover:border-neutral-700'
                     }`}
+                    aria-label={`Away match ${away.ageGroupId} ${away.sessionTitle}`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-bold text-white">{away.ageGroupId}</span>

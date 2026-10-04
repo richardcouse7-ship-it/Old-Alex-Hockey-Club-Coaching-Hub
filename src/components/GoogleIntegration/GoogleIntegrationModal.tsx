@@ -170,8 +170,17 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
     authStatus.userEmail.toLowerCase() === AUTHORIZED_DIRECTOR_EMAIL.toLowerCase();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md">
-      <div className="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden font-sans">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md cursor-pointer"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Google Workspace & Drive Sync"
+    >
+      <div
+        className="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden font-sans cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="p-5 sm:p-6 border-b border-neutral-800 flex items-center justify-between bg-black shrink-0">
           <div className="flex items-center gap-3">
@@ -430,8 +439,9 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
 
           {/* Google Cloud API Client ID Configuration (Accordion) */}
           <div className="p-5 bg-neutral-950 border border-neutral-800 rounded-2xl space-y-3">
-            <div
-              className="flex items-center justify-between cursor-pointer"
+            <button
+              type="button"
+              className="w-full flex items-center justify-between cursor-pointer text-left transition-all active:scale-95"
               onClick={() => setShowSetupGuide(!showSetupGuide)}
             >
               <div className="flex items-center gap-2 text-white font-bold">
@@ -443,7 +453,7 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
               ) : (
                 <ChevronDown className="w-4 h-4 text-neutral-400" />
               )}
-            </div>
+            </button>
 
             <p className="text-neutral-400 leading-relaxed">
               <strong>Direct Gmail Web Compose</strong> works instantly with zero setup. If you want the app to automatically create Google Drive folders, upload backups in the background, or send emails via the Gmail API, add your Google Cloud Client ID below.

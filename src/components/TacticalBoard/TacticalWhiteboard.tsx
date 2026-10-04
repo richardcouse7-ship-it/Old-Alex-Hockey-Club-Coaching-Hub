@@ -291,8 +291,14 @@ export const TacticalWhiteboard: React.FC<TacticalWhiteboardProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-black border border-neutral-800 rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5"
+      onClick={onClose}
+    >
+      <div
+        className="bg-black border border-neutral-800 rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Top Header */}
         <div className="p-4 sm:p-5 border-b border-neutral-800 bg-neutral-950 flex flex-wrap items-center justify-between gap-3">
           <div>

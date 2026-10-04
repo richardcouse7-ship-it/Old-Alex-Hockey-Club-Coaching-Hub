@@ -33,8 +33,16 @@ export const DrillCardGrid: React.FC<DrillCardGridProps> = ({
       {drills.map((drill) => (
         <div
           key={drill.id}
-          className="group bg-neutral-950 border border-neutral-800 hover:border-red-500 rounded-2xl p-5 flex flex-col justify-between transition-all hover:shadow-lg cursor-pointer"
+          role="button"
+          tabIndex={0}
+          className="group bg-neutral-950 border border-neutral-800 hover:border-red-500 rounded-2xl p-5 flex flex-col justify-between transition-all hover:shadow-lg cursor-pointer active:scale-95 select-none"
           onClick={() => onSelectDrill(drill)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onSelectDrill(drill);
+            }
+          }}
         >
           <div>
             {/* Badges */}

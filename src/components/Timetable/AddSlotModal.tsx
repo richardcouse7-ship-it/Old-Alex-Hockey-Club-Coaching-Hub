@@ -81,10 +81,17 @@ export const AddSlotModal: React.FC<AddSlotModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Add Sunday Session Slot"
+    >
       <form
         onSubmit={handleSubmit}
-        className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-4"
+        className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-4 cursor-default"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-white">Add Sunday Session Slot</h2>

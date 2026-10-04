@@ -197,8 +197,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Metric 4: Drills in Library */}
         <div
+          role="button"
+          tabIndex={0}
           onClick={() => onNavigateTab('drills')}
-          className="bg-black border border-neutral-800 p-4 sm:p-5 rounded-2xl flex flex-col justify-between hover:border-red-500 transition-colors cursor-pointer"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onNavigateTab('drills');
+            }
+          }}
+          className="bg-black border border-neutral-800 p-4 sm:p-5 rounded-2xl flex flex-col justify-between hover:border-red-500 transition-all cursor-pointer active:scale-95 select-none"
+          aria-label="Browse Drills in Library"
         >
           <div className="flex items-center justify-between text-xs text-neutral-300 font-semibold">
             <span>Drills in Library</span>
@@ -273,7 +282,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 type="button"
                 onClick={() => onNavigateTab('timetable')}
-                className="text-xs text-red-400 hover:text-white font-semibold flex items-center gap-1"
+                className="text-xs text-red-400 hover:text-white font-semibold flex items-center gap-1 transition-transform active:scale-95"
               >
                 <span>View Full Timetable</span>
                 <ArrowRight className="w-3 h-3" />
@@ -294,8 +303,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   return (
                     <div
                       key={s.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => onSelectSlot(s)}
-                      className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-red-500 cursor-pointer transition-colors"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelectSlot(s);
+                        }
+                      }}
+                      className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-red-500 cursor-pointer transition-all active:scale-95 select-none"
+                      aria-label={`Pitch session ${s.ageGroupId} ${s.sessionTitle}`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded font-mono-data">
@@ -380,7 +398,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onNavigateTab('timetable')}
-                      className="self-end text-[11px] font-bold text-red-400 hover:text-white underline"
+                      className="self-end text-[11px] font-bold text-red-400 hover:text-white underline transition-transform active:scale-95"
                     >
                       Resolve in Timetable →
                     </button>

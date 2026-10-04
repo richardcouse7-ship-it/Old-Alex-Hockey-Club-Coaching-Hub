@@ -57,7 +57,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
         <button
           type="button"
           onClick={() => onSelectTab('timetable')}
-          className={`flex-1 flex flex-col items-center justify-center min-h-[48px] min-w-[48px] py-1 px-1 rounded-xl transition-all active:scale-95 ${
+          className={`flex-1 flex flex-col items-center justify-center min-h-[48px] min-w-[48px] py-1 px-1 rounded-xl transition-all active:scale-95 cursor-pointer ${
             currentTab === 'timetable'
               ? isSunMode
                 ? 'text-red-700 font-black'
@@ -83,7 +83,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
         <button
           type="button"
           onClick={() => onSelectTab('availability')}
-          className={`flex-1 flex flex-col items-center justify-center min-h-[48px] min-w-[48px] py-1 px-1 rounded-xl transition-all active:scale-95 ${
+          className={`flex-1 flex flex-col items-center justify-center min-h-[48px] min-w-[48px] py-1 px-1 rounded-xl transition-all active:scale-95 cursor-pointer ${
             isCoachesActive
               ? isSunMode
                 ? 'text-red-700 font-black'
@@ -110,7 +110,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           <button
             type="button"
             onClick={handleOpenCompanion}
-            className={`min-h-[48px] min-w-[56px] px-3 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 shadow-md ${
+            className={`min-h-[48px] min-w-[56px] px-3 py-1.5 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md ${
               isSunMode
                 ? 'bg-red-600 text-white font-extrabold border-2 border-neutral-950 hover:bg-red-700'
                 : 'bg-red-600 text-white font-bold shadow-red-950/50 hover:bg-red-500 ring-1 ring-red-400/40'
@@ -127,7 +127,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
         <button
           type="button"
           onClick={() => onSelectTab('drills')}
-          className={`flex-1 flex flex-col items-center justify-center min-h-[48px] min-w-[48px] py-1 px-1 rounded-xl transition-all active:scale-95 ${
+          className={`flex-1 flex flex-col items-center justify-center min-h-[48px] min-w-[48px] py-1 px-1 rounded-xl transition-all active:scale-95 cursor-pointer ${
             currentTab === 'drills'
               ? isSunMode
                 ? 'text-red-700 font-black'
@@ -153,7 +153,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
         <button
           type="button"
           onClick={onToggleMore}
-          className={`flex-1 flex flex-col items-center justify-center min-h-[48px] min-w-[48px] py-1 px-1 rounded-xl transition-all active:scale-95 ${
+          className={`flex-1 flex flex-col items-center justify-center min-h-[48px] min-w-[48px] py-1 px-1 rounded-xl transition-all active:scale-95 cursor-pointer ${
             isSunMode
               ? 'text-neutral-700 hover:text-neutral-950 font-semibold'
               : 'text-neutral-400 hover:text-white font-medium'

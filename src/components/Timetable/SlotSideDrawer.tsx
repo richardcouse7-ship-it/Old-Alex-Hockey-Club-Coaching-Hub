@@ -88,9 +88,18 @@ _Old Alex Youth Coaching Hub_`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-sm transition-opacity">
-      <div className="absolute inset-y-0 right-0 flex max-w-full pl-10">
-        <div className="relative w-screen max-w-2xl bg-black border-l border-neutral-800 shadow-2xl flex flex-col">
+    <div
+      className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-sm transition-opacity cursor-pointer"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Session Slot Details"
+    >
+      <div className="absolute inset-y-0 right-0 flex max-w-full pl-10 pointer-events-none">
+        <div
+          className="relative w-screen max-w-2xl bg-black border-l border-neutral-800 shadow-2xl flex flex-col pointer-events-auto cursor-default"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <div className="p-6 border-b border-neutral-800 bg-neutral-950">
             <div className="flex items-start justify-between">
@@ -154,7 +163,7 @@ _Old Alex Youth Coaching Hub_`;
                   <button
                     type="button"
                     onClick={() => onOpenPitchCompanion(slot)}
-                    className="p-2 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-750 text-white transition-colors shadow-sm"
+                    className="min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-850 border border-neutral-750 text-white transition-all active:scale-95 cursor-pointer shadow-sm"
                     title="Launch Live Turf Timer with referee whistle alerts"
                   >
                     <Clock className="w-4 h-4 text-red-500" />
@@ -171,10 +180,10 @@ _Old Alex Youth Coaching Hub_`;
                       handleCopySlotWhatsApp();
                     }
                   }}
-                  className={`p-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors ${
+                  className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
                     copiedWhatsApp
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-neutral-900 hover:bg-neutral-800 border border-neutral-750 text-emerald-400'
+                      : 'bg-neutral-900 hover:bg-neutral-850 border border-neutral-750 text-emerald-400'
                   }`}
                   title="WhatsApp Templates (Briefing / Parent update)"
                 >
@@ -198,7 +207,7 @@ _Old Alex Youth Coaching Hub_`;
                     );
                     ExportService.printOrSavePDF(html, `OldAlex-${slot.ageGroupId}-${slot.pitchSectorId}`);
                   }}
-                  className="p-2 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-850 border border-neutral-750 text-purple-400 hover:text-purple-300 transition-colors shadow-sm"
+                  className="min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-850 border border-neutral-750 text-purple-400 hover:text-purple-300 transition-all active:scale-95 cursor-pointer shadow-sm"
                   title="Save or share sunlight-ready 1-Page Digital PDF Card"
                 >
                   <FileDown className="w-4 h-4" />
@@ -208,7 +217,7 @@ _Old Alex Youth Coaching Hub_`;
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors"
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 transition-all active:scale-95 cursor-pointer"
                   aria-label="Close drawer"
                 >
                   <X className="w-5 h-5" />
@@ -227,7 +236,7 @@ _Old Alex Youth Coaching Hub_`;
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`px-4 py-2.5 text-xs font-bold tracking-wide border-b-2 transition-all ${
+                  className={`px-4 py-2.5 text-xs font-bold tracking-wide border-b-2 transition-all active:scale-95 cursor-pointer ${
                     activeTab === tab.id
                       ? 'border-red-500 text-white bg-red-600/10'
                       : 'border-transparent text-neutral-400 hover:text-white'
@@ -309,7 +318,7 @@ _Old Alex Youth Coaching Hub_`;
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2 text-xs font-bold bg-red-600 hover:bg-red-500 text-white rounded-xl shadow-md transition-colors"
+                className="min-h-[44px] min-w-[70px] px-5 py-2 text-xs font-bold bg-red-600 hover:bg-red-500 text-white rounded-xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center"
               >
                 Done
               </button>

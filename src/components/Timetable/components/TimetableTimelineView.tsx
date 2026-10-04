@@ -64,12 +64,20 @@ export const TimetableTimelineView: React.FC<TimetableTimelineViewProps> = ({
                 return (
                   <div
                     key={slot.id}
-                    className={`group relative rounded-xl border p-4 transition-all hover:border-red-500 hover:bg-neutral-900 cursor-pointer ${
+                    role="button"
+                    tabIndex={0}
+                    className={`group relative rounded-xl border p-4 transition-all hover:border-red-500 hover:bg-neutral-900 cursor-pointer active:scale-95 select-none ${
                       slotConflicts.length > 0
                         ? 'border-amber-700/80 bg-neutral-900'
                         : 'border-neutral-800 bg-black'
                     }`}
                     onClick={() => onSelectSlot(slot)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectSlot(slot);
+                      }
+                    }}
                   >
                     {/* Top bar of card */}
                     <div className="flex items-start justify-between gap-2 mb-2">

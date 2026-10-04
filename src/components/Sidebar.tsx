@@ -133,8 +133,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Backdrop Overlay */}
       {isOpenMobile && (
         <div
-          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden cursor-pointer"
           onClick={onCloseMobile}
+          role="button"
+          tabIndex={0}
+          aria-label="Close navigation sidebar"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onCloseMobile();
+            }
+          }}
         />
       )}
 
@@ -152,13 +161,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <div className="flex items-center gap-3">
             {/* Old Alex Crest Badge */}
-            <div
+            <button
+              type="button"
               onClick={onToggleCollapse}
-              className="cursor-pointer shrink-0 transition-transform active:scale-95"
+              className="cursor-pointer shrink-0 transition-transform active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-xl"
               title={isCollapsed ? 'Click to expand sidebar' : 'Old Alex Hockey Club'}
+              aria-label={isCollapsed ? 'Expand sidebar' : 'Old Alex Hockey Club'}
             >
               <OldAlexCrest size={isCollapsed ? 34 : 42} className="drop-shadow-md" />
-            </div>
+            </button>
             {!isCollapsed && (
               <div>
                 <h1 className="text-sm font-bold text-white tracking-tight leading-tight">
@@ -175,7 +186,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="hidden lg:flex p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-900 transition-colors"
+              className="hidden lg:flex min-h-[44px] min-w-[44px] items-center justify-center p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-900 transition-all active:scale-95"
               title="Collapse sidebar to icon mode"
               aria-label="Collapse sidebar"
             >
@@ -187,7 +198,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             type="button"
             onClick={onCloseMobile}
-            className="lg:hidden min-h-[48px] min-w-[48px] flex items-center justify-center p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-900"
+            className="lg:hidden min-h-[48px] min-w-[48px] flex items-center justify-center p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-900 transition-all active:scale-95"
             aria-label="Close navigation sidebar"
           >
             <X className="w-5 h-5" />
@@ -219,7 +230,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       title={item.label}
                       aria-label={item.label}
                       aria-current={isActive ? 'page' : undefined}
-                      className={`w-full flex items-center rounded-xl text-xs font-semibold transition-all min-h-[44px] ${
+                      className={`w-full flex items-center rounded-xl text-xs font-semibold transition-all min-h-[44px] active:scale-95 cursor-pointer ${
                         isCollapsed ? 'justify-center p-2.5' : 'gap-3 px-3.5 py-2.5'
                       } ${
                         isActive
@@ -261,7 +272,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 title="Director Dashboard"
                 aria-label="Director Dashboard"
                 aria-current={currentTab === 'dashboard' ? 'page' : undefined}
-                className={`w-full flex items-center rounded-xl text-xs font-semibold transition-all min-h-[44px] ${
+                className={`w-full flex items-center rounded-xl text-xs font-semibold transition-all min-h-[44px] active:scale-95 cursor-pointer ${
                   isCollapsed ? 'justify-center p-2.5' : 'gap-3 px-3.5 py-2.5'
                 } ${
                   currentTab === 'dashboard'
@@ -287,7 +298,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onOpenExportHub('whatsapp');
                     onCloseMobile();
                   }}
-                  className={`w-full flex items-center rounded-xl text-xs font-bold text-white bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 transition-colors min-h-[44px] group shadow-sm ${
+                  className={`w-full flex items-center rounded-xl text-xs font-bold text-white bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 transition-all active:scale-95 cursor-pointer min-h-[44px] group shadow-sm ${
                     isCollapsed ? 'justify-center p-2' : 'justify-between px-3.5 py-2.5'
                   }`}
                   title="Export & Comms Hub (WhatsApp, Email, Calendar, CSV, Drive)"
@@ -313,7 +324,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onOpenImportModal();
                     onCloseMobile();
                   }}
-                  className={`w-full flex items-center rounded-xl text-xs font-semibold text-neutral-200 hover:text-white bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-emerald-500/50 transition-colors min-h-[44px] shadow-sm cursor-pointer ${
+                  className={`w-full flex items-center rounded-xl text-xs font-semibold text-neutral-200 hover:text-white bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-emerald-500/50 transition-all active:scale-95 min-h-[44px] shadow-sm cursor-pointer ${
                     isCollapsed ? 'justify-center p-2' : 'justify-between px-3.5 py-2.5'
                   }`}
                   title="Import Weekly Schedule from Google Sheets or Excel"
@@ -338,7 +349,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onOpenEmergencyModal();
                     onCloseMobile();
                   }}
-                  className={`w-full flex items-center rounded-xl text-xs font-bold text-red-400 hover:text-white bg-red-950/30 hover:bg-red-900/40 border border-red-800/50 transition-colors min-h-[44px] ${
+                  className={`w-full flex items-center rounded-xl text-xs font-bold text-red-400 hover:text-white bg-red-950/30 hover:bg-red-900/40 border border-red-800/50 transition-all active:scale-95 cursor-pointer min-h-[44px] ${
                     isCollapsed ? 'justify-center p-2' : 'gap-3 px-3.5 py-2'
                   }`}
                   title="Emergency Safety EAP & Defibrillator Access"
@@ -357,7 +368,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onOpenPitchCompanion();
                     onCloseMobile();
                   }}
-                  className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-colors min-h-[44px] ${
+                  className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-all active:scale-95 cursor-pointer min-h-[44px] ${
                     isCollapsed ? 'justify-center p-2' : 'gap-3 px-3.5 py-2'
                   }`}
                   title="Pitch Companion (Live Timer & Whistle)"
@@ -375,7 +386,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onOpenWhatsAppModal();
                     onCloseMobile();
                   }}
-                  className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-colors min-h-[44px] ${
+                  className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-all active:scale-95 cursor-pointer min-h-[44px] ${
                     isCollapsed ? 'justify-center p-2' : 'gap-3 px-3.5 py-2'
                   }`}
                   title="Quick WhatsApp Dispatch"
@@ -393,7 +404,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onOpenGoogleModal();
                     onCloseMobile();
                   }}
-                  className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-colors min-h-[44px] ${
+                  className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-all active:scale-95 cursor-pointer min-h-[44px] ${
                     isCollapsed ? 'justify-center p-2' : 'justify-between px-3.5 py-2'
                   }`}
                   title="Google Drive Vault & Gmail Integration"
@@ -418,7 +429,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onOpenDirectorPack();
                     onCloseMobile();
                   }}
-                  className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-colors min-h-[44px] ${
+                  className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-all active:scale-95 cursor-pointer min-h-[44px] ${
                     isCollapsed ? 'justify-center p-2' : 'gap-3 px-3.5 py-2'
                   }`}
                   title="Director Master Pack (PIN 1893)"
@@ -436,7 +447,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onOpenTacticalAnimator();
                     onCloseMobile();
                   }}
-                  className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-colors min-h-[44px] ${
+                  className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-all active:scale-95 cursor-pointer min-h-[44px] ${
                     isCollapsed ? 'justify-center p-2' : 'gap-3 px-3.5 py-2'
                   }`}
                   title="Tactical Drill Animator (2v1s, press, penalty corners)"
@@ -453,7 +464,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onOpenReport();
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-colors min-h-[44px] ${
+                className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-all active:scale-95 cursor-pointer min-h-[44px] ${
                   isCollapsed ? 'justify-center p-2' : 'gap-3 px-3.5 py-2'
                 }`}
                 title="Monthly Report Export"
@@ -469,7 +480,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onOpenNotifications();
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-colors min-h-[44px] ${
+                className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-all active:scale-95 cursor-pointer min-h-[44px] ${
                   isCollapsed ? 'justify-center p-2' : 'justify-between px-3.5 py-2'
                 }`}
                 title="Pitch Alerts"
@@ -524,7 +535,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={onToggleSimulateOffline}
-                className="mt-2 w-full min-h-[44px] py-1 text-[10px] font-semibold text-neutral-300 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors border border-neutral-700 flex items-center justify-center"
+                className="mt-2 w-full min-h-[44px] py-1 text-[10px] font-semibold text-neutral-300 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-all active:scale-95 cursor-pointer border border-neutral-700 flex items-center justify-center"
               >
                 {isSimulatingOffline ? 'Switch to Live Online' : 'Simulate Pitch Offline'}
               </button>
@@ -533,7 +544,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={onToggleSimulateOffline}
-              className="w-full flex items-center justify-center min-h-[44px] p-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-neutral-300 transition-colors"
+              className="w-full flex items-center justify-center min-h-[44px] p-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-neutral-300 transition-all active:scale-95 cursor-pointer"
               title={
                 isSimulatingOffline
                   ? 'Pitch Mode Active (Offline)'

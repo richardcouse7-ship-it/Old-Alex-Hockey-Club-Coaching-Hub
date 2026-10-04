@@ -15,6 +15,16 @@
   }
 }
 
+/* Ensure SVG icons inside buttons never intercept pointer clicks */
+button svg,
+[role="button"] svg {
+  pointer-events: none !important;
+}
+
+[role="button"] {
+  cursor: pointer;
+}
+
 /* Custom sleek scrollbar for coaching board */
 ::-webkit-scrollbar {
   width: 6px;

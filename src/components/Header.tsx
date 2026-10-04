@@ -81,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={onOpenMobileSidebar}
-          className="lg:hidden min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-neutral-300 hover:text-white rounded-xl hover:bg-neutral-900 focus:outline-none"
+          className="lg:hidden min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-neutral-300 hover:text-white rounded-xl hover:bg-neutral-900 active:scale-95 transition-all focus:outline-none"
           aria-label="Open navigation menu"
         >
           <Menu className="w-5 h-5" />
@@ -91,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onToggleSidebarCollapse}
-            className="hidden lg:flex min-h-[36px] min-w-[36px] items-center justify-center p-2 text-neutral-400 hover:text-white rounded-xl hover:bg-neutral-900 border border-neutral-800 transition-colors"
+            className="hidden lg:flex min-h-[44px] min-w-[44px] items-center justify-center p-2 text-neutral-400 hover:text-white rounded-xl hover:bg-neutral-900 border border-neutral-800 transition-all active:scale-95"
             title={isSidebarCollapsed ? 'Expand Sidebar (256px)' : 'Collapse Sidebar to Icons (72px)'}
             aria-label="Toggle sidebar collapse"
           >
@@ -105,10 +105,11 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => handleStepWeek(-7)}
-            className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors"
+            className="min-h-[32px] min-w-[32px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-all active:scale-95"
             title="Previous Week (-7 days)"
+            aria-label="Previous week"
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
 
           <Calendar className="w-3.5 h-3.5 text-red-500 shrink-0 ml-0.5" />
@@ -136,10 +137,11 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => handleStepWeek(7)}
-            className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors"
+            className="min-h-[32px] min-w-[32px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-all active:scale-95"
             title="Next Week (+7 days)"
+            aria-label="Next week"
           >
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
 
           {/* Open Calendar Manager Modal */}
@@ -147,8 +149,9 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onOpenCalendarManager}
-              className="p-1 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-neutral-800 transition-colors ml-0.5"
+              className="min-h-[32px] min-w-[32px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center p-1 text-neutral-400 hover:text-red-400 rounded-lg hover:bg-neutral-800 transition-all active:scale-95 ml-0.5"
               title="Open Calendar Manager & Timetable Cloning"
+              aria-label="Open Calendar Manager"
             >
               <CalendarDays className="w-3.5 h-3.5 text-red-400" />
             </button>
@@ -269,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenNotificationsModal}
-            className="relative min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-750 text-neutral-200 hover:text-white transition-colors"
+            className="relative min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-750 text-neutral-200 hover:text-white transition-all active:scale-95"
             title="Pitch & Schedule Alerts"
           >
             <Bell className="w-4 h-4 text-red-500" />

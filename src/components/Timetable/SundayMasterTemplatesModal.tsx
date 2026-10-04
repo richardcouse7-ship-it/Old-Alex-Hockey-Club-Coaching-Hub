@@ -144,8 +144,17 @@ export const SundayMasterTemplatesModal: React.FC<SundayMasterTemplatesModalProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
-      <div className="bg-black border border-neutral-800 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 cursor-pointer"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Sunday Timetable Master Templates"
+    >
+      <div
+        className="bg-black border border-neutral-800 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="p-5 border-b border-neutral-800 bg-neutral-950 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -294,12 +303,21 @@ export const SundayMasterTemplatesModal: React.FC<SundayMasterTemplatesModalProp
               return (
                 <div
                   key={tpl.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedTemplateId(tpl.id)}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative ${
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedTemplateId(tpl.id);
+                    }
+                  }}
+                  className={`p-3.5 rounded-2xl border transition-all active:scale-95 cursor-pointer relative select-none ${
                     isSelected
                       ? 'bg-neutral-900 border-red-500 shadow-md ring-1 ring-red-500/50'
                       : 'bg-neutral-950 border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900'
                   }`}
+                  aria-label={`Select template ${tpl.name}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span

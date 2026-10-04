@@ -22,9 +22,18 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-sm">
-      <div className="absolute inset-y-0 right-0 flex max-w-full pl-10">
-        <div className="relative w-screen max-w-md bg-black border-l border-neutral-800 shadow-2xl flex flex-col">
+    <div
+      className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-sm cursor-pointer"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Staff Pitch Alerts"
+    >
+      <div className="absolute inset-y-0 right-0 flex max-w-full pl-10 pointer-events-none">
+        <div
+          className="relative w-screen max-w-md bg-black border-l border-neutral-800 shadow-2xl flex flex-col pointer-events-auto cursor-default"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <div className="p-5 border-b border-neutral-800 bg-neutral-950 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -40,7 +49,8 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-900"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-900 transition-all active:scale-95 cursor-pointer"
+              aria-label="Close pitch alerts"
             >
               <X className="w-5 h-5" />
             </button>
@@ -51,7 +61,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
             <button
               type="button"
               onClick={onOpenBroadcastModal}
-              className="font-bold text-red-500 hover:text-red-400"
+              className="font-bold text-red-500 hover:text-red-400 transition-all active:scale-95 cursor-pointer min-h-[36px] flex items-center"
             >
               + Broadcast New Alert
             </button>
@@ -59,7 +69,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
               <button
                 type="button"
                 onClick={onMarkAllAsRead}
-                className="hover:text-white"
+                className="hover:text-white transition-all active:scale-95 cursor-pointer min-h-[36px] flex items-center"
                 title="Mark all as read"
               >
                 Mark read
@@ -67,7 +77,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
               <button
                 type="button"
                 onClick={onClearAll}
-                className="hover:text-red-400"
+                className="hover:text-red-400 transition-all active:scale-95 cursor-pointer min-h-[36px] flex items-center"
                 title="Clear all notifications"
               >
                 Clear

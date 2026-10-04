@@ -55,8 +55,17 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-black border border-neutral-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 space-y-5">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Broadcast Pitch and Schedule Alert"
+    >
+      <div
+        className="bg-black border border-neutral-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 space-y-5 cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">

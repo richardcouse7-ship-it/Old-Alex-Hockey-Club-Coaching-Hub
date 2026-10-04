@@ -158,8 +158,17 @@ export const BulkTimingsEditorModal: React.FC<BulkTimingsEditorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
-      <div className="bg-black border border-neutral-800 rounded-3xl w-full max-w-5xl overflow-hidden shadow-2xl flex flex-col max-h-[94vh]">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 cursor-pointer"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Bulk Timetable Manager"
+    >
+      <div
+        className="bg-black border border-neutral-800 rounded-3xl w-full max-w-5xl overflow-hidden shadow-2xl flex flex-col max-h-[94vh] cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Top Header */}
         <div className="p-5 border-b border-neutral-800 bg-neutral-950 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">

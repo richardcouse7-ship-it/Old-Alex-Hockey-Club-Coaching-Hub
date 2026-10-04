@@ -230,8 +230,14 @@ export const SundayMorningQuickActions: React.FC<SundayMorningQuickActionsProps>
 
       {/* Weather Delay Modal */}
       {showWeatherModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-black border border-neutral-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 space-y-4">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowWeatherModal(false)}
+        >
+          <div
+            className="bg-black border border-neutral-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-amber-950 border border-amber-500/40 flex items-center justify-center text-amber-400">
@@ -342,8 +348,14 @@ export const SundayMorningQuickActions: React.FC<SundayMorningQuickActionsProps>
 
       {/* Emergency Coach Sub Finder Modal */}
       {showSubFinderModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-black border border-neutral-800 rounded-3xl w-full max-w-xl shadow-2xl p-6 space-y-4">
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowSubFinderModal(false)}
+        >
+          <div
+            className="bg-black border border-neutral-800 rounded-3xl w-full max-w-xl shadow-2xl p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-blue-950 border border-blue-500/40 flex items-center justify-center text-blue-400">

@@ -123,8 +123,17 @@ Please come over to the pitch dugout when convenient, or call us directly.
   ];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-neutral-950 border-2 border-red-600/70 rounded-3xl w-full max-w-3xl shadow-2xl shadow-red-950/40 overflow-hidden flex flex-col">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 cursor-pointer"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Emergency Fast-Dial & Medical Protocol"
+    >
+      <div
+        className="bg-neutral-950 border-2 border-red-600/70 rounded-3xl w-full max-w-3xl shadow-2xl shadow-red-950/40 overflow-hidden flex flex-col cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Top Emergency Red Banner */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-red-700 via-red-600 to-red-800 text-white flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3">

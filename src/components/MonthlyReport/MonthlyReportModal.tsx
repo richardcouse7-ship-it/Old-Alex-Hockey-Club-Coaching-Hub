@@ -79,8 +79,17 @@ export const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-black border border-neutral-800 rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl p-6 sm:p-8 space-y-6">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Monthly Coaching & Operations Report"
+    >
+      <div
+        className="bg-black border border-neutral-800 rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl p-6 sm:p-8 space-y-6 cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Top Bar */}
         <div className="flex items-start justify-between border-b border-neutral-800 pb-5">
           <div className="flex items-center gap-3.5">
