@@ -16,12 +16,16 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react';
-import { Coach, PitchSector, ScheduleConflict, SessionSlot, SundayPrepChecklist } from '../types';
+import { Coach, Drill, PitchSector, ScheduleConflict, SessionSlot, SundayPrepChecklist } from '../types';
+import { PitchsideCockpitHUD } from './Dashboard/PitchsideCockpitHUD';
 
 interface DashboardViewProps {
   slots: SessionSlot[];
   coaches: Coach[];
   sectors: PitchSector[];
+  drills?: Drill[];
+  selectedDate?: string;
+  isSunMode?: boolean;
   conflicts: ScheduleConflict[];
   checklist: SundayPrepChecklist[];
   onToggleChecklist: (id: string) => void;
@@ -40,6 +44,8 @@ interface DashboardViewProps {
   };
   onNavigateTab: (tab: string) => void;
   onSelectSlot: (slot: SessionSlot) => void;
+  onOpenPitchCompanion?: (slot?: SessionSlot) => void;
+  onOpenEmergencyModal?: (slot?: SessionSlot) => void;
   onCopyWhatsApp: () => void;
   copiedWhatsApp: boolean;
   onOpenReport: () => void;
@@ -51,12 +57,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   slots,
   coaches,
   sectors,
+  drills = [],
+  selectedDate = new Date().toISOString().split('T')[0],
+  isSunMode = false,
   conflicts,
   checklist,
   onToggleChecklist,
   utilization,
   onNavigateTab,
   onSelectSlot,
+  onOpenPitchCompanion,
+  onOpenEmergencyModal,
   onCopyWhatsApp,
   copiedWhatsApp,
   onOpenReport,
@@ -122,6 +133,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Live Sunday Pitchside Cockpit (Now & Next HUD) */}
+      <PitchsideCockpitHUD
+        slots={slots}
+        coaches={coaches}
+        drills={drills}
+        sectors={sectors}
+        selectedDate={selectedDate}
+        isSunMode={isSunMode}
+        onSelectSlot={onSelectSlot}
+        onOpenPitchCompanion={onOpenPitchCompanion || ((s) => s && onSelectSlot(s))}
+        onOpenEmergencyModal={onOpenEmergencyModal || (() => {})}
+        onNavigateTab={onNavigateTab}
+      />
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

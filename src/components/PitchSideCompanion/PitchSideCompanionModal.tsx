@@ -5,26 +5,22 @@ import {
   RotateCcw,
   SkipForward,
   SkipBack,
-  Volume2,
-  VolumeX,
-  X,
-  Maximize2,
-  Minimize2,
-  Clock,
   Users,
   ShieldAlert,
   Flame,
   FileText,
   Timer,
   Activity,
-  Plus,
-  Radio,
-  CheckCircle,
-  Sparkles,
 } from 'lucide-react';
 import { Coach, Drill, PitchSector, SessionSlot } from '../../types';
+import { TimerMode, MatchPeriod, DrillSegment } from './types';
+import { useWhistleAudio } from './hooks/useWhistleAudio';
+import { usePitchsideTimer } from './hooks/usePitchsideTimer';
+import { CompanionHeader } from './CompanionHeader';
+import { StationRotationControls } from './StationRotationControls';
+import { DrillSegmentList } from './DrillSegmentList';
 
-interface PitchSideCompanionModalProps {
+export interface PitchSideCompanionModalProps {
   isOpen: boolean;
   onClose: () => void;
   slot: SessionSlot | null;
@@ -37,16 +33,7 @@ interface PitchSideCompanionModalProps {
   onLogIncidentPrompt?: (sectorCode: string, ageGroup: string) => void;
 }
 
-export type TimerMode = 'station' | 'match' | 'session';
-
-interface DrillSegment {
-  id: string;
-  name: string;
-  durationMinutes: number;
-  category: 'warmup' | 'technical' | 'tactical' | 'game' | 'debrief';
-  notes?: string;
-  completed: boolean;
-}
+export type { TimerMode, MatchPeriod, DrillSegment };
 
 export const PitchSideCompanionModal: React.FC<PitchSideCompanionModalProps> = ({
   isOpen,
@@ -69,7 +56,7 @@ export const PitchSideCompanionModal: React.FC<PitchSideCompanionModalProps> = (
   const [autoAdvanceStation, setAutoAdvanceStation] = useState(true);
 
   // Match Half State
-  const [matchPeriod, setMatchPeriod] = useState<'1st Half' | '2nd Half' | 'Half-Time Break'>('1st Half');
+  const [matchPeriod, setMatchPeriod] = useState<MatchPeriod>('1st Half');
 
   // Build segments from attached drills or standard structure
   const buildSegments = (currentSlot: SessionSlot | null): DrillSegment[] => {
@@ -162,16 +149,52 @@ export const PitchSideCompanionModal: React.FC<PitchSideCompanionModalProps> = (
   const [segments, setSegments] = useState<DrillSegment[]>(() => buildSegments(slot));
   const [activeSegmentIndex, setActiveSegmentIndex] = useState(0);
 
-  // Time tracking
-  const [secondsRemaining, setSecondsRemaining] = useState(10 * 60); // default 10m
-  const [isRunning, setIsRunning] = useState(false);
-  const [whistleAudioEnabled, setWhistleAudioEnabled] = useState(true);
+  // Whistle Audio Hook
+  const {
+    whistleAudioEnabled,
+    toggleWhistleAudio,
+    playRefereeWhistle,
+    whistlePlayedToast,
+    whistleToastText,
+  } = useWhistleAudio();
+
+  // Pitchside Timer Hook
+  const {
+    secondsRemaining,
+    setSecondsRemaining,
+    isRunning,
+    setIsRunning,
+    visualStrobeActive,
+    formattedTime,
+    isWarningTime,
+    setPresetMinutes,
+    addTimeSeconds,
+    handleReset,
+    toggleRunning,
+  } = usePitchsideTimer({
+    timerMode,
+    segments,
+    activeSegmentIndex,
+    autoAdvanceStation,
+    currentStation,
+    totalStations,
+    onWhistle: playRefereeWhistle,
+    onSegmentComplete: (completedIdx, nextIdx) => {
+      setSegments((curr) =>
+        curr.map((seg, idx) => (idx === completedIdx ? { ...seg, completed: true } : seg))
+      );
+      if (nextIdx !== null) {
+        setActiveSegmentIndex(nextIdx);
+      }
+    },
+    onStationAdvance: () => {
+      setCurrentStation((s) => s + 1);
+    },
+  });
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [pitchNotes, setPitchNotes] = useState<string[]>([]);
   const [quickNoteText, setQuickNoteText] = useState('');
-  const [whistlePlayedToast, setWhistlePlayedToast] = useState(false);
-  const [whistleToastText, setWhistleToastText] = useState('WHISTLE BLOWN! 🏑');
-  const [visualStrobeActive, setVisualStrobeActive] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const wakeLockRef = useRef<any>(null);
@@ -222,141 +245,6 @@ export const PitchSideCompanionModal: React.FC<PitchSideCompanionModalProps> = (
     };
   }, [isRunning]);
 
-  // Sound synthesizer for realistic referee whistle with FM modulation (pea flutter)
-  const playRefereeWhistle = (type: 'short' | 'rotation' | 'fulltime' = 'rotation') => {
-    if (!whistleAudioEnabled) return;
-    try {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const ctx = new AudioCtx();
-      if (ctx.state === 'suspended') {
-        ctx.resume();
-      }
-
-      const blowBlast = (delay: number, duration: number, freq: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-
-        // Modulator for realistic referee whistle trill/flutter
-        const modOsc = ctx.createOscillator();
-        const modGain = ctx.createGain();
-
-        modOsc.frequency.setValueAtTime(26, ctx.currentTime + delay);
-        modGain.gain.setValueAtTime(140, ctx.currentTime + delay);
-        modOsc.connect(osc.frequency);
-
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
-
-        gain.gain.setValueAtTime(0, ctx.currentTime + delay);
-        gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + delay + 0.03);
-        gain.gain.setValueAtTime(0.4, ctx.currentTime + delay + duration - 0.04);
-        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + delay + duration);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        modOsc.start(ctx.currentTime + delay);
-        osc.start(ctx.currentTime + delay);
-
-        modOsc.stop(ctx.currentTime + delay + duration);
-        osc.stop(ctx.currentTime + delay + duration);
-      };
-
-      if (type === 'short') {
-        blowBlast(0, 0.22, 2800);
-        setWhistleToastText('ATTENTION / RESTART! 🏑');
-      } else if (type === 'fulltime') {
-        blowBlast(0, 0.18, 2750);
-        blowBlast(0.24, 0.18, 2750);
-        blowBlast(0.48, 0.7, 2600);
-        setWhistleToastText('FULL TIME / SESSION STOP! 🏑');
-      } else {
-        blowBlast(0, 0.2, 2800);
-        blowBlast(0.28, 0.35, 2750);
-        setWhistleToastText('ROTATE STATIONS! 🏑');
-      }
-
-      setWhistlePlayedToast(true);
-      setTimeout(() => setWhistlePlayedToast(false), 2400);
-    } catch {
-      // Audio fallback silent
-    }
-  };
-
-  // Timer interval with visual strobe and auto-advancement
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isRunning) {
-      interval = setInterval(() => {
-        setSecondsRemaining((prev) => {
-          if (prev <= 1) {
-            // Time expired! Trigger whistle & visual strobe
-            setVisualStrobeActive(true);
-            setTimeout(() => setVisualStrobeActive(false), 3500);
-
-            if (timerMode === 'station') {
-              playRefereeWhistle('rotation');
-              if (autoAdvanceStation && currentStation < totalStations) {
-                setCurrentStation((s) => s + 1);
-                // Reset to default station length (e.g. 10m)
-                return 10 * 60;
-              } else {
-                setIsRunning(false);
-                return 0;
-              }
-            } else if (timerMode === 'match') {
-              playRefereeWhistle('fulltime');
-              setIsRunning(false);
-              return 0;
-            } else {
-              // Session mode
-              const isLast = activeSegmentIndex === segments.length - 1;
-              playRefereeWhistle(isLast ? 'fulltime' : 'rotation');
-
-              setSegments((curr) =>
-                curr.map((seg, idx) => (idx === activeSegmentIndex ? { ...seg, completed: true } : seg))
-              );
-
-              if (!isLast) {
-                const nextIdx = activeSegmentIndex + 1;
-                setActiveSegmentIndex(nextIdx);
-                return (segments[nextIdx]?.durationMinutes || 10) * 60;
-              } else {
-                setIsRunning(false);
-                return 0;
-              }
-            }
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isRunning, timerMode, autoAdvanceStation, currentStation, totalStations, activeSegmentIndex, segments]);
-
-  // Presets
-  const setPresetMinutes = (mins: number) => {
-    setIsRunning(false);
-    setSecondsRemaining(mins * 60);
-  };
-
-  const addTimeSeconds = (secs: number) => {
-    setSecondsRemaining((prev) => Math.max(0, prev + secs));
-  };
-
-  const handleReset = () => {
-    setIsRunning(false);
-    if (timerMode === 'session') {
-      setSecondsRemaining((segments[activeSegmentIndex]?.durationMinutes || 10) * 60);
-    } else if (timerMode === 'station') {
-      setSecondsRemaining(10 * 60);
-    } else {
-      setSecondsRemaining(20 * 60);
-    }
-  };
-
   const handleAddQuickNote = (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickNoteText.trim()) return;
@@ -384,11 +272,6 @@ export const PitchSideCompanionModal: React.FC<PitchSideCompanionModalProps> = (
 
   if (!isOpen) return null;
 
-  const minutes = Math.floor(secondsRemaining / 60);
-  const seconds = secondsRemaining % 60;
-  const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  const isWarningTime = secondsRemaining <= 30 && secondsRemaining > 0 && isRunning;
-
   const assignedCoachNames = slot
     ? coaches
         .filter((c) => slot.assignedCoachIds.includes(c.id))
@@ -414,97 +297,19 @@ export const PitchSideCompanionModal: React.FC<PitchSideCompanionModalProps> = (
             : 'border-neutral-800'
         }`}
       >
-        {/* Top Header Bar */}
-        <div className="p-4 sm:p-5 bg-black border-b border-neutral-850 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-red-600 text-white flex items-center justify-center font-bold shadow-lg shadow-red-600/30">
-              <Clock className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono-data text-red-500 font-bold uppercase tracking-wider">
-                  Pitch-Side Companion · Live Turf Mode
-                </span>
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                {'wakeLock' in navigator && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-neutral-900 text-neutral-400 font-mono">
-                    Screen Awake ⚡
-                  </span>
-                )}
-              </div>
-              <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                <span>{slot ? `${slot.ageGroupId} on Pitch` : 'Pitch Session Timer'}</span>
-                {sector && (
-                  <span className="text-xs px-2.5 py-0.5 rounded-lg bg-neutral-900 text-red-400 font-mono-data font-bold border border-red-500/30">
-                    {sector.code}
-                  </span>
-                )}
-              </h2>
-            </div>
-          </div>
-
-          {/* Quick Header Controls */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setWhistleAudioEnabled(!whistleAudioEnabled)}
-              className={`p-2.5 rounded-xl border transition-colors ${
-                whistleAudioEnabled
-                  ? 'bg-neutral-900 text-red-400 border-red-500/30'
-                  : 'bg-neutral-950 text-neutral-500 border-neutral-850'
-              }`}
-              title={whistleAudioEnabled ? 'Whistle Sound ON' : 'Whistle Sound MUTED'}
-            >
-              {whistleAudioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            </button>
-
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className="p-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white border border-neutral-800 transition-colors"
-              title="Toggle Fullscreen Turf Mode"
-            >
-              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white border border-neutral-800 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Pitch Sector Switcher Bar (Quickly jump between P1N, P1S, P2N, P2S on turf) */}
-        {allSlots.length > 0 && onSelectSlot && (
-          <div className="px-4 py-2.5 bg-neutral-900/60 border-b border-neutral-850 flex items-center gap-2 overflow-x-auto">
-            <span className="text-[11px] font-mono-data uppercase tracking-wider text-neutral-400 shrink-0 flex items-center gap-1">
-              <Radio className="w-3.5 h-3.5 text-red-500" />
-              <span>Sectors:</span>
-            </span>
-            {allSlots.map((s) => {
-              const sec = allSectors.find((p) => p.id === s.pitchSectorId);
-              const isSelected = slot?.id === s.id;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => onSelectSlot(s)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
-                    isSelected
-                      ? 'bg-red-600 text-white border-red-500 shadow-md shadow-red-600/20'
-                      : 'bg-neutral-950 text-neutral-300 border-neutral-800 hover:border-neutral-700'
-                  }`}
-                >
-                  <span className="font-mono-data font-bold">{sec?.code || 'P'}</span>
-                  <span className="ml-1.5 opacity-90">{s.ageGroupId}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        {/* Top Header Bar & Sector Switcher */}
+        <CompanionHeader
+          slot={slot}
+          sector={sector}
+          allSlots={allSlots}
+          allSectors={allSectors}
+          onSelectSlot={onSelectSlot}
+          whistleAudioEnabled={whistleAudioEnabled}
+          onToggleWhistleAudio={toggleWhistleAudio}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={toggleFullscreen}
+          onClose={onClose}
+        />
 
         {/* Mode Selector Tabs */}
         <div className="grid grid-cols-3 bg-black border-b border-neutral-800 text-center text-xs font-bold">
@@ -567,43 +372,14 @@ export const PitchSideCompanionModal: React.FC<PitchSideCompanionModalProps> = (
             {/* Active Mode Status Header */}
             <div>
               {timerMode === 'station' && (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs font-mono-data text-neutral-400">
-                    <span className="uppercase tracking-wider text-red-400 font-bold">
-                      Station Circuit
-                    </span>
-                    <label className="flex items-center gap-1.5 cursor-pointer text-neutral-300">
-                      <input
-                        type="checkbox"
-                        checked={autoAdvanceStation}
-                        onChange={(e) => setAutoAdvanceStation(e.target.checked)}
-                        className="rounded accent-red-600 w-3.5 h-3.5"
-                      />
-                      <span>Auto-Advance Station</span>
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                      Station {currentStation} of {totalStations}
-                    </h3>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setCurrentStation((s) => Math.max(1, s - 1))}
-                        className="px-2.5 py-1 text-xs rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white"
-                      >
-                        Prev
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCurrentStation((s) => Math.min(totalStations, s + 1))}
-                        className="px-2.5 py-1 text-xs rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <StationRotationControls
+                  currentStation={currentStation}
+                  totalStations={totalStations}
+                  autoAdvanceStation={autoAdvanceStation}
+                  onSetAutoAdvanceStation={setAutoAdvanceStation}
+                  onPrevStation={() => setCurrentStation((s) => Math.max(1, s - 1))}
+                  onNextStation={() => setCurrentStation((s) => Math.min(totalStations, s + 1))}
+                />
               )}
 
               {timerMode === 'match' && (
@@ -780,7 +556,7 @@ export const PitchSideCompanionModal: React.FC<PitchSideCompanionModalProps> = (
 
                 <button
                   type="button"
-                  onClick={() => setIsRunning(!isRunning)}
+                  onClick={toggleRunning}
                   className={`flex-1 max-w-sm py-4 rounded-2xl text-white font-extrabold text-lg flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 border ${
                     isRunning
                       ? 'bg-neutral-800 hover:bg-neutral-750 border-neutral-700'
@@ -895,70 +671,18 @@ export const PitchSideCompanionModal: React.FC<PitchSideCompanionModalProps> = (
             </div>
 
             {/* Running Order List */}
-            <div className="space-y-2 flex-1">
-              <div className="flex items-center justify-between border-b border-neutral-850 pb-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-red-500" />
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-                    Drill Running Order
-                  </h4>
-                </div>
-                <span className="text-[11px] font-mono-data text-neutral-400">
-                  {totalSessionMinutes} mins
-                </span>
-              </div>
-
-              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                {segments.map((seg, idx) => {
-                  const isActive = idx === activeSegmentIndex && timerMode === 'session';
-                  return (
-                    <button
-                      key={seg.id}
-                      type="button"
-                      onClick={() => {
-                        setTimerMode('session');
-                        setActiveSegmentIndex(idx);
-                        setSecondsRemaining(seg.durationMinutes * 60);
-                        setIsRunning(false);
-                      }}
-                      className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 ${
-                        isActive
-                          ? 'bg-neutral-900 border-red-500 shadow-md text-white'
-                          : seg.completed
-                          ? 'bg-black border-neutral-850 text-neutral-500 line-through opacity-70'
-                          : 'bg-black border-neutral-850 text-neutral-300 hover:border-neutral-700'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className={`w-5 h-5 rounded-md text-[11px] font-mono-data font-bold flex items-center justify-center shrink-0 ${
-                            isActive
-                              ? 'bg-red-600 text-white'
-                              : seg.completed
-                              ? 'bg-neutral-900 text-neutral-400 border border-neutral-750'
-                              : 'bg-neutral-900 text-neutral-300'
-                          }`}
-                        >
-                          {seg.completed ? '✓' : idx + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold truncate leading-tight">
-                            {seg.name}
-                          </p>
-                          <p className="text-[10px] text-neutral-500 capitalize">
-                            {seg.category}
-                          </p>
-                        </div>
-                      </div>
-
-                      <span className="text-xs font-mono-data text-red-400 shrink-0 font-bold">
-                        {seg.durationMinutes}m
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <DrillSegmentList
+              segments={segments}
+              activeSegmentIndex={activeSegmentIndex}
+              totalSessionMinutes={totalSessionMinutes}
+              isSessionMode={timerMode === 'session'}
+              onSelectSegment={(idx) => {
+                setTimerMode('session');
+                setActiveSegmentIndex(idx);
+                setSecondsRemaining(segments[idx].durationMinutes * 60);
+                setIsRunning(false);
+              }}
+            />
 
             {/* Pitch-Side Notes & Debrief Logger */}
             <div className="space-y-2 pt-2 border-t border-neutral-850">
