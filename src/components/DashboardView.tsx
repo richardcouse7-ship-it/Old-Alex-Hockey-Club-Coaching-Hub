@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   MapPin,
   FileSpreadsheet,
+  Upload,
   Wifi,
   WifiOff,
 } from 'lucide-react';
@@ -50,6 +51,7 @@ interface DashboardViewProps {
   copiedWhatsApp: boolean;
   onOpenReport: () => void;
   onOpenBroadcastModal: () => void;
+  onOpenImportModal?: (initialText?: string) => void;
   isOnline: boolean;
 }
 
@@ -72,6 +74,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   copiedWhatsApp,
   onOpenReport,
   onOpenBroadcastModal,
+  onOpenImportModal,
   isOnline,
 }) => {
   const readySlotsCount = slots.filter((s) => s.status === 'Ready').length;
@@ -102,6 +105,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             type="button"
+            onClick={() => onOpenImportModal?.()}
+            className="min-h-[44px] px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center gap-2 transition-all shadow-md active:scale-95"
+            title="Upload CSV / Excel schedule to autofill Sunday timetable"
+          >
+            <Upload className="w-4 h-4 text-white" />
+            <span>Upload Schedule</span>
+          </button>
+
+          <button
+            type="button"
             onClick={onCopyWhatsApp}
             className={`min-h-[44px] px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 transition-all shadow-md active:scale-95 ${
               copiedWhatsApp
@@ -116,7 +129,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             type="button"
             onClick={onOpenBroadcastModal}
-            className="min-h-[44px] px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center gap-2 transition-all shadow-md active:scale-95"
+            className="min-h-[44px] px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-850 border border-neutral-750 text-white rounded-xl flex items-center gap-2 transition-all active:scale-95"
             title="Alert staff with push notification"
           >
             <Bell className="w-4 h-4 text-white" />
@@ -130,6 +143,55 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           >
             <FileSpreadsheet className="w-4 h-4 text-neutral-300" />
             <span>Monthly Report</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Quick Schedule CSV Upload Banner / Dropzone */}
+      <div className="bg-neutral-900/90 border border-neutral-750 p-4 sm:p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-500 shrink-0">
+            <FileSpreadsheet className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-white">Upload Provisional Schedule (CSV)</h3>
+              <span className="text-[10px] font-mono-data bg-emerald-950/80 border border-emerald-600/60 text-emerald-400 px-2 py-0.5 rounded-full font-bold">
+                Instant Autofill
+              </span>
+            </div>
+            <p className="text-xs text-neutral-400 mt-0.5">
+              Upload your provisional CSV schedule to autofill Milltown pitch training allocations and away Leinster fixtures.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <label className="min-h-[44px] px-4 py-2 text-xs font-semibold bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 text-white rounded-xl flex items-center gap-2 cursor-pointer transition-all active:scale-95">
+            <Upload className="w-4 h-4 text-red-400" />
+            <span>Select CSV File</span>
+            <input
+              type="file"
+              accept=".csv,.tsv,.txt"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                  const content = event.target?.result as string;
+                  if (content) onOpenImportModal?.(content);
+                };
+                reader.readAsText(file);
+              }}
+              className="hidden"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => onOpenImportModal?.()}
+            className="min-h-[44px] px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center gap-2 transition-all shadow-md active:scale-95"
+          >
+            <span>Review & Autofill</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </div>

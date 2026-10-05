@@ -292,6 +292,9 @@ export default function App() {
                   copiedWhatsApp={copiedWhatsApp}
                   onOpenReport={() => openModal('report')}
                   onOpenBroadcastModal={() => openModal('broadcast')}
+                  onOpenImportModal={(initialText) =>
+                    openModal('schedule_import', initialText ? { initialText } : undefined)
+                  }
                   isOnline={isOnline && !isSimulatingOffline}
                 />
               )}

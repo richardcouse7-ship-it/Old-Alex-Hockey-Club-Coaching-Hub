@@ -166,4 +166,111 @@ Minor	Training	Ben McInerney	Conor Ryan	14:30	15:15`;
       expect(result.slots[1].isAway).toBeFalsy();
     });
   });
+
+  describe('Provisional Schedule CSV Parsing', () => {
+    const PROVISIONAL_CSV = `Home/Away,Group,Activity/Opponent,Venue,Time,Notes
+Home,Inter,Training (to be split Inter Mx to decide),Home,10:30am - 12:00pm,
+Home,"PEN, 1st, 2nd, 3rd, 4th class",Training,Home,12:00pm - 1:00pm,
+Home,5th class & 1st year,Training,Home,1:00pm - 2:15pm,
+Home,Inter,Training (to be split Inter Mx to decide),Home,2:15pm - 3:45pm,Second inter training slot
+Away,6th class A,v Pembroke (Div 1),Serpentine Ave,11:00am,
+Away,6th class B,v Our Lady's (Div 3),Our Lady's school Terenure,2:00pm,
+Away,6th class C,v Glenanne (Div 6),St Mark's,11:10am,Start time updated per follow-up emails
+Away,Minor A,v Bray (Div 1),Temple Carrig,4:00pm,
+Away,Minor B,v Railway (Div 3),Park Ave,11:00am,
+Away,Minor C,v Loreto (Div 7),Loreto Beaufort,11:15am,BIBS and WHITE SOCKS`;
+
+    it('correctly parses user provisional schedule CSV into slots and match fixtures', () => {
+      const result = parseSpreadsheetSchedule(PROVISIONAL_CSV, COACHES, '2026-10-11');
+
+      // 1. Should have expanded multi-group rows (9 home sessions + 6 away matches = 15 total slots)
+      expect(result.slots.length).toBe(15);
+      expect(result.rows.length).toBe(15);
+
+      // 2. Target date preserved
+      expect(result.slots.every((s) => s.date === '2026-10-11')).toBe(true);
+
+      // 3. Home morning Inter session (10:30 - 12:00)
+      const firstInter = result.slots.find(
+        (s) => s.sessionTitle.includes('Inter') && s.startTime === '10:30'
+      );
+      expect(firstInter).toBeDefined();
+      expect(firstInter?.endTime).toBe('12:00');
+      expect(firstInter?.isAway).toBe(false);
+
+      // 4. Multi-group Junior Hour at 12:00 - 13:00 (PEN, 1st, 2nd, 3rd, 4th)
+      const penSlot = result.slots.find((s) => s.ageGroupId === 'PEN');
+      const firstClassSlot = result.slots.find((s) => s.ageGroupId === '1st Class');
+      const secondClassSlot = result.slots.find((s) => s.ageGroupId === '2nd Class');
+      const thirdClassSlot = result.slots.find((s) => s.ageGroupId === '3rd Class');
+      const fourthClassSlot = result.slots.find((s) => s.ageGroupId === '4th Class');
+
+      expect(penSlot).toBeDefined();
+      expect(penSlot?.pitchSectorId).toBe('p3'); // The Cage
+      expect(penSlot?.startTime).toBe('12:00');
+      expect(penSlot?.endTime).toBe('13:00');
+
+      expect(firstClassSlot).toBeDefined();
+      expect(firstClassSlot?.startTime).toBe('12:00');
+      expect(firstClassSlot?.endTime).toBe('13:00');
+
+      expect(secondClassSlot).toBeDefined();
+      expect(thirdClassSlot).toBeDefined();
+      expect(fourthClassSlot).toBeDefined();
+
+      // 5. Afternoon slot: 5th class & 1st year (1:00pm - 2:15pm -> 13:00 - 14:15)
+      const fifthSlot = result.slots.find((s) => s.ageGroupId === '5th Class');
+      const firstYearSlot = result.slots.find((s) => s.ageGroupId === '1st Years');
+
+      expect(fifthSlot).toBeDefined();
+      expect(fifthSlot?.startTime).toBe('13:00');
+      expect(fifthSlot?.endTime).toBe('14:15');
+
+      expect(firstYearSlot).toBeDefined();
+      expect(firstYearSlot?.startTime).toBe('13:00');
+      expect(firstYearSlot?.endTime).toBe('14:15');
+
+      // 6. Second Inter session (2:15pm - 3:45pm -> 14:15 - 15:45)
+      const secondInter = result.slots.find(
+        (s) => s.sessionTitle.includes('Inter') && s.startTime === '14:15'
+      );
+      expect(secondInter).toBeDefined();
+      expect(secondInter?.endTime).toBe('15:45');
+      expect(secondInter?.coachNotes).toContain('Second inter training slot');
+
+      // 7. Away Matches (6 total)
+      const awaySlots = result.slots.filter((s) => s.isAway);
+      expect(awaySlots.length).toBe(6);
+
+      // Check 6th Class A vs Pembroke at Serpentine Ave
+      const pembrokeMatch = awaySlots.find((s) => s.sessionTitle.includes('6th class A'));
+      expect(pembrokeMatch).toBeDefined();
+      expect(pembrokeMatch?.startTime).toBe('11:00');
+      expect(pembrokeMatch?.meetTime).toBe('10:15'); // 45m prior
+      expect(pembrokeMatch?.opposition).toBe('Pembroke');
+      expect(pembrokeMatch?.venueName).toContain('Pembroke HC (Serpentine Ave)');
+
+      // Check Our Lady's (2:00pm -> 14:00, meet 13:15)
+      const ourLadysMatch = awaySlots.find((s) => s.sessionTitle.includes('6th class B'));
+      expect(ourLadysMatch).toBeDefined();
+      expect(ourLadysMatch?.startTime).toBe('14:00');
+      expect(ourLadysMatch?.meetTime).toBe('13:15');
+      expect(ourLadysMatch?.venueName).toContain("Our Lady's School Terenure");
+
+      // Check Minor C vs Loreto with notes (BIBS and WHITE SOCKS)
+      const minorCMatch = awaySlots.find((s) => s.sessionTitle.includes('Minor C'));
+      expect(minorCMatch).toBeDefined();
+      expect(minorCMatch?.startTime).toBe('11:15');
+      expect(minorCMatch?.meetTime).toBe('10:30');
+      expect(minorCMatch?.coachNotes).toContain('BIBS and WHITE SOCKS');
+
+      // 8. Match Fixtures Generation
+      expect(result.fixtures.length).toBe(6);
+      const brayFixture = result.fixtures.find((f) => f.opposition === 'Bray');
+      expect(brayFixture).toBeDefined();
+      expect(brayFixture?.pushbackTime).toBe('16:00');
+      expect(brayFixture?.venue).toContain('Temple Carrig');
+      expect(brayFixture?.competition).toContain('Div 1');
+    });
+  });
 });

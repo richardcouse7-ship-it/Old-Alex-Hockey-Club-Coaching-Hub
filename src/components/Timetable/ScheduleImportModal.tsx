@@ -21,6 +21,7 @@ import { Coach, MatchFixture, PitchSector, SessionSlot } from '../../types';
 import {
   parseSpreadsheetSchedule,
   SAMPLE_WEEKLY_SPREADSHEET_TEXT,
+  SAMPLE_PROVISIONAL_CSV_TEXT,
   ParseScheduleResult,
 } from '../../utils/scheduleImportParser';
 
@@ -30,6 +31,7 @@ interface ScheduleImportModalProps {
   selectedDate: string;
   existingCoaches: Coach[];
   sectors: PitchSector[];
+  initialText?: string;
   onApplySchedule: (result: {
     slots: SessionSlot[];
     newCoaches: Coach[];
@@ -46,12 +48,21 @@ export const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({
   selectedDate,
   existingCoaches,
   sectors,
+  initialText = '',
   onApplySchedule,
 }) => {
-  const [inputText, setInputText] = useState<string>('');
+  const [inputText, setInputText] = useState<string>(initialText);
   const [targetDate, setTargetDate] = useState<string>(selectedDate);
   const [importMode, setImportMode] = useState<'replace' | 'merge'>('replace');
   const [activeTab, setActiveTab] = useState<'preview' | 'raw'>('preview');
+
+  // Sync inputText if initialText changes
+  React.useEffect(() => {
+    if (initialText) {
+      setInputText(initialText);
+      setActiveTab('preview');
+    }
+  }, [initialText]);
 
   // Parse whenever input text or target date changes
   const parseResult: ParseScheduleResult = useMemo(() => {
@@ -81,6 +92,11 @@ export const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({
   const handleLoadSample = () => {
     setInputText(SAMPLE_WEEKLY_SPREADSHEET_TEXT);
     setTargetDate('2026-10-04');
+    setActiveTab('preview');
+  };
+
+  const handleLoadProvisionalSample = () => {
+    setInputText(SAMPLE_PROVISIONAL_CSV_TEXT);
     setActiveTab('preview');
   };
 
@@ -170,11 +186,22 @@ export const ScheduleImportModal: React.FC<ScheduleImportModalProps> = ({
             <button
               type="button"
               onClick={handleLoadSample}
-              className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/40 font-semibold rounded-lg flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
-              title="Preload the exact 15 rows from your uploaded spreadsheet screenshot"
+              className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-750 text-neutral-300 border border-neutral-700 font-semibold rounded-lg flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+              title="Preload the master sheet screenshot sample format"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Load Screenshot Master</span>
+            </button>
+
+            {/* Quick Load Provisional CSV */}
+            <button
+              type="button"
+              onClick={handleLoadProvisionalSample}
+              className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/40 font-semibold rounded-lg flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+              title="Preload the provisional schedule CSV (Home allocations & away fixtures)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-red-400" />
+              <span>Load Provisional CSV</span>
             </button>
 
             {/* File Upload Button */}

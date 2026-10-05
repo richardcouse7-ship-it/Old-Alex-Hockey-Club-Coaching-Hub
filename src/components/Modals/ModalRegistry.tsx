@@ -455,6 +455,7 @@ export function ModalRegistry() {
             selectedDate={selectedDate}
             existingCoaches={coaches}
             sectors={sectors}
+            initialText={(modalPayload?.initialText as string) || ''}
             onApplySchedule={handleApplyScheduleImport}
           />
         )}

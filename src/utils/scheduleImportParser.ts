@@ -7,6 +7,7 @@ export interface ParsedScheduleRow {
   rawVenue: string;
   isMatch: boolean;
   opposition?: string;
+  competition?: string;
   isHome: boolean;
   assignedCoachNames: string[];
   startTime: string;
@@ -32,6 +33,19 @@ export interface ParseScheduleResult {
   parseErrors: string[];
   detectedDate?: string;
 }
+
+// Exact provisional schedule CSV format with Home/Away, Group, Activity, Venue, Time, Notes
+export const SAMPLE_PROVISIONAL_CSV_TEXT = `Home/Away,Group,Activity/Opponent,Venue,Time,Notes
+Home,Inter,Training (to be split Inter Mx to decide),Home,10:30am - 12:00pm,
+Home,"PEN, 1st, 2nd, 3rd, 4th class",Training,Home,12:00pm - 1:00pm,
+Home,5th class & 1st year,Training,Home,1:00pm - 2:15pm,
+Home,Inter,Training (to be split Inter Mx to decide),Home,2:15pm - 3:45pm,Second inter training slot
+Away,6th class A,v Pembroke (Div 1),Serpentine Ave,11:00am,
+Away,6th class B,v Our Lady's (Div 3),Our Lady's school Terenure,2:00pm,
+Away,6th class C,v Glenanne (Div 6),St Mark's,11:10am,Start time updated per follow-up emails
+Away,Minor A,v Bray (Div 1),Temple Carrig,4:00pm,
+Away,Minor B,v Railway (Div 3),Park Ave,11:00am,
+Away,Minor C,v Loreto (Div 7),Loreto Beaufort,11:15am,BIBS and WHITE SOCKS`;
 
 // Exact raw tab-separated text corresponding to Richard's weekly master sheet screenshot
 export const SAMPLE_WEEKLY_SPREADSHEET_TEXT = `Date	Match/Team	Venue/Location	Assigned	Assigned Umpire/Coach	Assigned	Assigned	Assig	Assigned	Start Time	End Time	Total
@@ -198,6 +212,141 @@ export function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+// Parse a single CSV or TSV line respecting quotes
+export function parseCSVLine(line: string, delimiter: string = ','): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === delimiter && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+// Convert 12h or 24h time string like "10:30am", "1:00pm", "14:15", "9:30" to "HH:mm"
+export function parseTimeStringTo24H(raw: string): string | null {
+  if (!raw) return null;
+  const clean = raw.trim().toLowerCase();
+
+  const match = clean.match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?$/i);
+  if (!match) return null;
+
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2] ? match[2] : '00';
+  const meridiem = match[3]?.toLowerCase();
+
+  if (meridiem === 'pm') {
+    if (hours < 12) hours += 12;
+  } else if (meridiem === 'am') {
+    if (hours === 12) hours = 0;
+  }
+
+  return `${hours.toString().padStart(2, '0')}:${minutes}`;
+}
+
+// Parse range or single time like "10:30am - 12:00pm", "1:00pm - 2:15pm", "11:00am"
+export function parseTimeField(raw: string): { startTime: string; endTime: string } {
+  if (!raw) return { startTime: '10:00', endTime: '11:15' };
+
+  const clean = raw.trim();
+  const rangeMatch = clean.match(/^([^-–—to]+)\s*[-–—to]\s*([^-–—to]+)$/i);
+  if (rangeMatch) {
+    let startPart = rangeMatch[1].trim();
+    let endPart = rangeMatch[2].trim();
+
+    const endHasPm = /pm/i.test(endPart);
+    const endHasAm = /am/i.test(endPart);
+    const startHasMeridiem = /am|pm/i.test(startPart);
+
+    if (!startHasMeridiem) {
+      if (endHasPm) {
+        const startH = parseInt(startPart, 10);
+        if (startH >= 8 && startH < 12) {
+          startPart += 'am';
+        } else {
+          startPart += 'pm';
+        }
+      } else if (endHasAm) {
+        startPart += 'am';
+      }
+    }
+
+    const parsedStart = parseTimeStringTo24H(startPart);
+    const parsedEnd = parseTimeStringTo24H(endPart);
+
+    if (parsedStart && parsedEnd) {
+      return { startTime: parsedStart, endTime: parsedEnd };
+    }
+    if (parsedStart) {
+      const sMins = timeToMinutes(parsedStart);
+      const eMins = sMins + 75;
+      const eh = Math.floor(eMins / 60).toString().padStart(2, '0');
+      const em = (eMins % 60).toString().padStart(2, '0');
+      return { startTime: parsedStart, endTime: `${eh}:${em}` };
+    }
+  }
+
+  const parsedSingle = parseTimeStringTo24H(clean);
+  if (parsedSingle) {
+    const sMins = timeToMinutes(parsedSingle);
+    const eMins = sMins + 75;
+    const eh = Math.floor(eMins / 60).toString().padStart(2, '0');
+    const em = (eMins % 60).toString().padStart(2, '0');
+    return { startTime: parsedSingle, endTime: `${eh}:${em}` };
+  }
+
+  return { startTime: '10:00', endTime: '11:15' };
+}
+
+// Expand grouped squad names like "PEN, 1st, 2nd, 3rd, 4th class" or "5th class & 1st year"
+export function expandTeamGroups(rawTeam: string): string[] {
+  const lower = rawTeam.toLowerCase();
+  const hasSeparators = rawTeam.includes(',') || rawTeam.includes('&') || /\band\b/i.test(rawTeam);
+
+  if (!hasSeparators) {
+    return [rawTeam.trim()];
+  }
+
+  const keywords = ['pen', 'prep', '1st', '2nd', '3rd', '4th', '5th', '6th', 'year', 'minor', 'inter'];
+  const matchedCount = keywords.filter((k) => lower.includes(k)).length;
+
+  if (matchedCount <= 1) {
+    return [rawTeam.trim()];
+  }
+
+  const rawParts = rawTeam.split(/[,&]|\band\b/i).map((p) => p.trim()).filter(Boolean);
+  const hasTrailingClass = lower.includes('class');
+  const results: string[] = [];
+
+  for (const part of rawParts) {
+    let normalizedPart = part;
+    if (hasTrailingClass && !/class|year|pen|prep|minor|inter/i.test(part)) {
+      if (/^(1st|2nd|3rd|4th|5th|6th)$/i.test(part)) {
+        normalizedPart = `${part} Class`;
+      }
+    }
+    results.push(normalizedPart);
+  }
+
+  return results.length > 0 ? results : [rawTeam.trim()];
+}
+
 // Calculate meet time (default 45 mins before pushback)
 export function calculateMeetTime(startTime: string, minutesBefore: number = 45): string {
   const startMins = timeToMinutes(startTime);
@@ -214,6 +363,12 @@ export function resolveVenueName(rawVenue: string, isHome: boolean): string {
     if (/water/i.test(rawVenue)) return 'Milltown Water Pitch';
     return 'Milltown Pitch 1 (Main Astro)';
   }
+  if (/serpentine/i.test(rawVenue) || /pembroke/i.test(rawVenue)) return 'Pembroke HC (Serpentine Ave)';
+  if (/our lady/i.test(rawVenue)) return "Our Lady's School Terenure";
+  if (/st mark/i.test(rawVenue)) return "St Mark's (Glenanne)";
+  if (/temple carrig/i.test(rawVenue)) return 'Temple Carrig (Bray)';
+  if (/park ave/i.test(rawVenue) || /railway/i.test(rawVenue)) return 'Railway Union HC (Park Ave)';
+  if (/loreto\s*beaufort/i.test(rawVenue)) return 'Loreto Beaufort';
   if (/wesley/i.test(rawVenue)) return 'Wesley College';
   if (/mt temple/i.test(rawVenue) || /mount temple/i.test(rawVenue)) return 'Mount Temple School';
   if (/drogheda/i.test(rawVenue)) return 'Drogheda Grammar School';
@@ -223,7 +378,6 @@ export function resolveVenueName(rawVenue: string, isHome: boolean): string {
   if (/dalkey/i.test(rawVenue)) return 'Loreto Dalkey';
   if (/ymca/i.test(rawVenue)) return 'YMCA Claremont Road';
   if (/monkstown/i.test(rawVenue)) return 'Monkstown HC';
-  if (/railway/i.test(rawVenue)) return 'Railway Union HC';
 
   const inMatch = rawVenue.match(/\bin\s+([^,()]+)/i);
   if (inMatch) return inMatch[1].trim();
@@ -317,10 +471,14 @@ export function parseSpreadsheetSchedule(
 
   // Dynamic column indexes
   let dateCol = -1;
+  let homeAwayCol = -1;
   let teamCol = -1;
+  let activityCol = -1;
   let venueCol = -1;
+  let timeCol = -1;
   let startTimeCol = -1;
   let endTimeCol = -1;
+  let notesCol = -1;
   let hasInspectedHeaders = false;
 
   // Floaters capture state
@@ -333,7 +491,7 @@ export function parseSpreadsheetSchedule(
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const cells = line.split(delimiter).map((c) => c.trim());
+    const cells = parseCSVLine(line, delimiter);
     if (cells.length === 0 || cells.every((c) => !c)) continue;
 
     const lowerCells = cells.map((c) => c.toLowerCase());
@@ -343,18 +501,26 @@ export function parseSpreadsheetSchedule(
       (c) =>
         c === 'match/team' ||
         c === 'team' ||
+        c === 'group' ||
         c === 'venue/location' ||
         c === 'assigned' ||
-        c === 'start time'
+        c === 'start time' ||
+        c === 'home/away' ||
+        c === 'activity/opponent' ||
+        c === 'activity'
     );
 
     if (isHeaderRow && !hasInspectedHeaders) {
       hasInspectedHeaders = true;
       dateCol = lowerCells.findIndex((c) => c.includes('date'));
-      teamCol = lowerCells.findIndex((c) => c.includes('team') || c.includes('match/team'));
+      homeAwayCol = lowerCells.findIndex((c) => c.includes('home/away') || c === 'h/a');
+      teamCol = lowerCells.findIndex((c) => c.includes('group') || c.includes('team') || c.includes('match/team') || c.includes('squad'));
+      activityCol = lowerCells.findIndex((c) => c.includes('activity') || c.includes('opponent') || c.includes('opposition'));
       venueCol = lowerCells.findIndex((c) => c.includes('venue') || c.includes('location'));
+      timeCol = lowerCells.findIndex((c) => c === 'time' || (c.includes('time') && !c.includes('start') && !c.includes('end')));
       startTimeCol = lowerCells.findIndex((c) => c.includes('start'));
       endTimeCol = lowerCells.findIndex((c) => c.includes('end'));
+      notesCol = lowerCells.findIndex((c) => c.includes('note') || c.includes('comment'));
       continue;
     }
 
@@ -380,7 +546,7 @@ export function parseSpreadsheetSchedule(
 
     // 3. If in float section, subsequent rows without teams/times are floaters
     if (inFloatSection) {
-      const rowHasTimes = cells.some((c) => /^\d{1,2}[:.]\d{2}$/.test(c));
+      const rowHasTimes = cells.some((c) => /^\d{1,2}[:.]\d{2}$/.test(c) || /am|pm/i.test(c));
       if (!rowHasTimes) {
         for (const cell of cells) {
           if (cell && !isIgnoredCoachName(cell)) {
@@ -425,17 +591,25 @@ export function parseSpreadsheetSchedule(
     if (!rawTeam || rawTeam.length < 2) continue;
 
     // Skip if team cell is a header leftover
-    if (rawTeam.toLowerCase() === 'match/team' || rawTeam.toLowerCase() === 'team') continue;
+    if (rawTeam.toLowerCase() === 'match/team' || rawTeam.toLowerCase() === 'team' || rawTeam.toLowerCase() === 'group') continue;
 
     // Extract Venue / Location
     const actualVenueCol = venueCol !== -1 ? venueCol : actualTeamCol + 1;
-    const rawVenue = cells[actualVenueCol]?.trim() || 'Home Training';
+    const rawVenue = cells[actualVenueCol]?.trim() || 'Home';
+
+    // Extract Activity and Notes
+    const rawActivity = activityCol !== -1 ? cells[activityCol]?.trim() || '' : '';
+    const rawNotes = notesCol !== -1 ? cells[notesCol]?.trim() || '' : '';
 
     // Scan for times
     let detectedStartTime = '';
     let detectedEndTime = '';
 
-    if (
+    if (timeCol !== -1 && cells[timeCol]) {
+      const timeObj = parseTimeField(cells[timeCol]);
+      detectedStartTime = timeObj.startTime;
+      detectedEndTime = timeObj.endTime;
+    } else if (
       startTimeCol !== -1 &&
       endTimeCol !== -1 &&
       cells[startTimeCol] &&
@@ -451,6 +625,9 @@ export function parseSpreadsheetSchedule(
         const trimmed = val.trim();
         if (/^\d{1,2}[:.]\d{2}$/.test(trimmed)) {
           timeMatches.push({ text: normalizeTime(trimmed), colIdx: idx });
+        } else if (/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i.test(trimmed)) {
+          const parsed = parseTimeField(trimmed);
+          timeMatches.push({ text: parsed.startTime, colIdx: idx });
         }
       });
 
@@ -484,12 +661,17 @@ export function parseSpreadsheetSchedule(
 
     // Extract Assigned Coaches
     const assignedCoachNames: string[] = [];
-    const coachStartCol = actualVenueCol + 1;
+    const coachStartCol = Math.max(actualVenueCol, activityCol !== -1 ? activityCol : actualVenueCol) + 1;
     const coachEndCol =
-      startTimeCol !== -1 ? startTimeCol : cells.findIndex((c) => /^\d{1,2}[:.]\d{2}$/.test(c));
+      startTimeCol !== -1
+        ? startTimeCol
+        : timeCol !== -1
+        ? timeCol
+        : cells.findIndex((c) => /^\d{1,2}[:.]\d{2}$/.test(c) || /am|pm/i.test(c));
 
     const maxCol = coachEndCol !== -1 ? coachEndCol : cells.length;
     for (let c = coachStartCol; c < maxCol; c++) {
+      if (c === notesCol || c === timeCol || c === venueCol || c === actualTeamCol) continue;
       const val = cells[c]?.trim();
       if (!val || isIgnoredCoachName(val)) continue;
       const cleaned = cleanCoachName(val);
@@ -499,95 +681,139 @@ export function parseSpreadsheetSchedule(
       }
     }
 
-    // Age Group & Pathway
-    const { ageGroup, pathway } = normalizeAgeGroup(rawTeam);
+    // Home / Away Determination
+    let isHome = true;
+    if (homeAwayCol !== -1 && cells[homeAwayCol]) {
+      const ha = cells[homeAwayCol].toLowerCase().trim();
+      isHome = ha === 'home' || ha === 'h';
+    } else {
+      const venueLower = rawVenue.toLowerCase();
+      isHome = !(
+        venueLower.includes('away') ||
+        venueLower.includes('in wesley') ||
+        venueLower.includes('in mt temple') ||
+        venueLower.includes('in drogheda') ||
+        venueLower.includes('at ')
+      );
+    }
 
-    // Is it a match?
+    // Match and opposition extraction
+    const matchTarget = `${rawActivity} ${rawVenue} ${rawTeam}`.toLowerCase();
     const isMatch =
-      rawVenue.toLowerCase().includes('match') ||
-      rawVenue.toLowerCase().includes('blitz') ||
-      rawVenue.toLowerCase().includes(' v ') ||
-      rawVenue.toLowerCase().includes(' vs ') ||
+      matchTarget.includes('match') ||
+      matchTarget.includes('blitz') ||
+      /\bv\b/i.test(rawActivity) ||
+      /\bvs\b/i.test(rawActivity) ||
+      /\bv\b/i.test(rawVenue) ||
+      /\bvs\b/i.test(rawVenue) ||
       rawTeam.toLowerCase().includes('match');
 
-    const venueLower = rawVenue.toLowerCase();
-    const isHome = !(
-      venueLower.includes('away') ||
-      venueLower.includes('in wesley') ||
-      venueLower.includes('in mt temple') ||
-      venueLower.includes('in drogheda') ||
-      venueLower.includes('at ')
-    );
-
-    // Opposition extraction
     let opposition: string | undefined = undefined;
-    if (/ v /i.test(rawVenue)) {
+    let competitionName: string | undefined = undefined;
+
+    if (rawActivity) {
+      const vMatch = rawActivity.match(/\bv[s]?\s+([^(]+)(?:\(([^)]+)\))?/i);
+      if (vMatch) {
+        opposition = vMatch[1].trim();
+        if (vMatch[2]) {
+          competitionName = `Leinster League (${vMatch[2].trim()})`;
+        }
+      }
+    }
+    if (!opposition && / v /i.test(rawVenue)) {
       opposition = rawVenue.split(/ v /i)[1]?.trim();
-    } else if (/ vs /i.test(rawVenue)) {
+    } else if (!opposition && / vs /i.test(rawVenue)) {
       opposition = rawVenue.split(/ vs /i)[1]?.trim();
-    } else if (venueLower.includes('monkstown')) {
-      opposition = 'Monkstown HC';
-    } else if (venueLower.includes('railway')) {
-      opposition = 'Railway Union HC';
+    } else if (!opposition) {
+      const vl = rawVenue.toLowerCase();
+      if (vl.includes('monkstown')) opposition = 'Monkstown HC';
+      else if (vl.includes('railway') || vl.includes('park ave')) opposition = 'Railway Union HC';
+      else if (vl.includes('pembroke') || vl.includes('serpentine')) opposition = 'Pembroke HC';
+      else if (vl.includes('our lady')) opposition = "Our Lady's HC";
+      else if (vl.includes('glenanne') || vl.includes('st mark')) opposition = 'Glenanne HC';
+      else if (vl.includes('bray') || vl.includes('temple carrig')) opposition = 'Bray HC';
+      else if (vl.includes('loreto')) opposition = 'Loreto HC';
+      else if (vl.includes('wesley')) opposition = 'Wesley College';
     }
 
     if (opposition && opposition.toLowerCase().includes(' in ')) {
       opposition = opposition.split(/ in /i)[0]?.trim();
     }
-    // Determine Pitch Sector
-    let pitchSectorId = 'p1n';
 
-    if (!isHome) {
-      pitchSectorId = 'away';
-    } else if (venueLower.includes('sand')) {
-      pitchSectorId = simultaneousCountMap['sand'] ? 'p2s' : 'p2n';
-      simultaneousCountMap['sand'] = (simultaneousCountMap['sand'] || 0) + 1;
-    } else if (venueLower.includes('water')) {
-      pitchSectorId = 'p1n';
-    } else if (venueLower.includes('cage') || rawTeam.toLowerCase().includes('pen')) {
-      pitchSectorId = 'p3';
-    } else {
-      // For simultaneous sessions at the same time, distribute across pitch sectors:
-      // P1N, P1S, P2N, P2S, P3
-      const timeKey = `${detectedStartTime}-${detectedEndTime}`;
-      const count = simultaneousCountMap[timeKey] || 0;
-      simultaneousCountMap[timeKey] = count + 1;
+    // Expand multiple team groups (e.g. "PEN, 1st, 2nd, 3rd, 4th class")
+    const expandedTeams = expandTeamGroups(rawTeam);
 
-      if (count % 5 === 0) pitchSectorId = 'p1n';
-      else if (count % 5 === 1) pitchSectorId = 'p1s';
-      else if (count % 5 === 2) pitchSectorId = 'p2n';
-      else if (count % 5 === 3) pitchSectorId = 'p2s';
-      else pitchSectorId = 'p3';
+    for (const subTeam of expandedTeams) {
+      const { ageGroup, pathway } = normalizeAgeGroup(subTeam);
+
+      // Determine Pitch Sector
+      let pitchSectorId = 'p1n';
+
+      if (!isHome) {
+        pitchSectorId = 'away';
+      } else if (rawVenue.toLowerCase().includes('sand')) {
+        pitchSectorId = simultaneousCountMap['sand'] ? 'p2s' : 'p2n';
+        simultaneousCountMap['sand'] = (simultaneousCountMap['sand'] || 0) + 1;
+      } else if (rawVenue.toLowerCase().includes('water')) {
+        pitchSectorId = 'p1n';
+      } else if (rawVenue.toLowerCase().includes('cage') || subTeam.toLowerCase().includes('pen')) {
+        pitchSectorId = 'p3';
+      } else {
+        // For simultaneous sessions at the same time, distribute across pitch sectors:
+        // P1N, P1S, P2N, P2S, P3
+        const timeKey = `${detectedStartTime}-${detectedEndTime}`;
+        const count = simultaneousCountMap[timeKey] || 0;
+        simultaneousCountMap[timeKey] = count + 1;
+
+        if (count % 5 === 0) pitchSectorId = 'p1n';
+        else if (count % 5 === 1) pitchSectorId = 'p1s';
+        else if (count % 5 === 2) pitchSectorId = 'p2n';
+        else if (count % 5 === 3) pitchSectorId = 'p2s';
+        else pitchSectorId = 'p3';
+      }
+
+      const durationMins = timeToMinutes(detectedEndTime) - timeToMinutes(detectedStartTime);
+      const timeSlot = `${detectedStartTime}–${detectedEndTime}`;
+
+      const venue = resolveVenueName(rawVenue, isHome);
+      const sessionTitle = isMatch
+        ? isHome
+          ? `${subTeam}: ${rawActivity || rawVenue}`
+          : `${subTeam} (AWAY vs ${opposition || 'Opponent'})`
+        : rawVenue.toLowerCase() === 'home'
+        ? `${subTeam} Squad Training`
+        : `${subTeam} Squad Training (${rawVenue})`;
+
+      const noteParts = [
+        rawNotes,
+        rawActivity && rawActivity.toLowerCase() !== 'training' && !rawActivity.startsWith('v ') ? rawActivity : '',
+        expandedTeams.length > 1 ? `Part of combined group: ${rawTeam}` : '',
+      ].filter(Boolean);
+
+      const notesText = noteParts.length > 0
+        ? noteParts.join(' | ')
+        : `Imported from weekly schedule sheet. Venue: ${venue}. Assigned: ${assignedCoachNames.join(', ')}`;
+
+      parsedRows.push({
+        rawTeam: subTeam,
+        ageGroupId: ageGroup,
+        pathway,
+        rawVenue,
+        isMatch,
+        opposition,
+        competition: competitionName,
+        isHome,
+        assignedCoachNames,
+        startTime: detectedStartTime,
+        endTime: detectedEndTime,
+        timeSlot,
+        durationMins: durationMins > 0 ? durationMins : 60,
+        pitchSectorId,
+        sessionTitle,
+        notes: notesText,
+        date: detectedDate || defaultTargetDate,
+      });
     }
-
-    const durationMins = timeToMinutes(detectedEndTime) - timeToMinutes(detectedStartTime);
-    const timeSlot = `${detectedStartTime}–${detectedEndTime}`;
-
-    const venue = resolveVenueName(rawVenue, isHome);
-    const sessionTitle = isMatch
-      ? isHome
-        ? `${rawTeam}: ${rawVenue}`
-        : `${rawTeam} (AWAY vs ${opposition || 'Opponent'})`
-      : `${rawTeam} Squad Training (${rawVenue})`;
-
-    parsedRows.push({
-      rawTeam,
-      ageGroupId: ageGroup,
-      pathway,
-      rawVenue,
-      isMatch,
-      opposition,
-      isHome,
-      assignedCoachNames,
-      startTime: detectedStartTime,
-      endTime: detectedEndTime,
-      timeSlot,
-      durationMins: durationMins > 0 ? durationMins : 60,
-      pitchSectorId,
-      sessionTitle,
-      notes: `Imported from weekly schedule sheet. Venue: ${venue}. Assigned: ${assignedCoachNames.join(', ')}`,
-      date: detectedDate || defaultTargetDate,
-    });
   }
 
   // Record Floaters
@@ -664,9 +890,7 @@ export function parseSpreadsheetSchedule(
         date: effectiveDate,
         pushbackTime: row.startTime,
         ageGroupOrTeam: row.rawTeam,
-        competition: row.rawVenue.toLowerCase().includes('blitz')
-          ? 'Friendly Blitz'
-          : 'Leinster League',
+        competition: row.competition || (row.rawVenue.toLowerCase().includes('blitz') ? 'Friendly Blitz' : 'Leinster League'),
         opposition: row.opposition || 'Opposition TBD',
         isHome: row.isHome,
         venue,
