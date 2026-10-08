@@ -155,6 +155,48 @@ export function timeToMinutes(timeStr: string): number {
   return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
 }
 
+// Known single-name volunteer whitelist (e.g., club records)
+export const KNOWN_SINGLE_NAME_COACHES = new Set(['anya', 'avril', 'ronan']);
+
+/**
+ * Strict Coach Person Name Validation
+ * Rejects non-coach CSV cells such as venues, times, match strings, and notes.
+ */
+export function isValidCoachPersonName(name: string): boolean {
+  if (!name) return false;
+  const trimmed = name.trim();
+
+  // Length must be between 3 and 32 characters
+  if (trimmed.length < 3 || trimmed.length > 32) return false;
+
+  // Contains time indicators: e.g. "2:00pm", "11:00 am", "10:30"
+  if (/\b\d{1,2}(:\d{2})?\s*(am|pm)\b/i.test(trimmed)) return false;
+  if (/^\d{1,2}:\d{2}$/.test(trimmed)) return false;
+
+  // Contains match/division indicators: e.g. "v Glenanne", "vs Bray", "Div 6", "Div 1"
+  if (/\bv\s+/i.test(trimmed)) return false;
+  if (/\bvs\s+/i.test(trimmed)) return false;
+  if (/\bdiv\s*\d+/i.test(trimmed)) return false;
+
+  // Contains notes/venue keywords
+  if (
+    /\b(bibs|socks|email|emails|training|split|school|ave|road|college|pitch|updated|astro|terenure|terrenure|bray|loreto|glenanne|railway|pembroke|home|away|mark'?s?|temple|carri?g|beaufort|serpentine|ymca|dalkey|monkstown|park)\b/i.test(
+      trimmed
+    )
+  ) {
+    return false;
+  }
+
+  // Does not contain at least one space separating first and last name (unless in known single-name whitelist)
+  const lower = trimmed.toLowerCase();
+  const hasSpace = /\s+/.test(trimmed);
+  if (!hasSpace && !KNOWN_SINGLE_NAME_COACHES.has(lower)) {
+    return false;
+  }
+
+  return true;
+}
+
 // Filter non-coach names (e.g. "Ref Provided", "TBD", numbers, etc.)
 export function isIgnoredCoachName(name: string): boolean {
   if (!name) return true;
@@ -179,6 +221,11 @@ export function isIgnoredCoachName(name: string): boolean {
   ) {
     return true;
   }
+
+  if (!isValidCoachPersonName(name)) {
+    return true;
+  }
+
   return false;
 }
 
@@ -392,6 +439,9 @@ export function parseSpreadsheetSchedule(
   existingCoaches: Coach[],
   defaultTargetDate: string
 ): ParseScheduleResult {
+  // 1. BOM & Whitespace Stripping
+  rawInput = rawInput.replace(/^\uFEFF/, '').trim();
+
   const lines = rawInput
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -411,8 +461,12 @@ export function parseSpreadsheetSchedule(
   const newlyDiscoveredCoaches: Coach[] = [];
   let colorIdx = existingCoaches.length % COACH_ACCENT_COLORS.length;
 
-  const resolveOrCreateCoach = (rawName: string): Coach => {
+  const resolveOrCreateCoach = (rawName: string): Coach | null => {
     const cleaned = cleanCoachName(rawName);
+    if (!isValidCoachPersonName(cleaned)) {
+      return null;
+    }
+
     const normalized = cleaned.toLowerCase();
 
     // Direct match
@@ -479,6 +533,7 @@ export function parseSpreadsheetSchedule(
   let startTimeCol = -1;
   let endTimeCol = -1;
   let notesCol = -1;
+  let assignedCoachCols: number[] = [];
   let hasInspectedHeaders = false;
 
   // Floaters capture state
@@ -503,7 +558,9 @@ export function parseSpreadsheetSchedule(
         c === 'team' ||
         c === 'group' ||
         c === 'venue/location' ||
-        c === 'assigned' ||
+        c.includes('assigned') ||
+        c.includes('coach') ||
+        c.includes('umpire') ||
         c === 'start time' ||
         c === 'home/away' ||
         c === 'activity/opponent' ||
@@ -521,6 +578,20 @@ export function parseSpreadsheetSchedule(
       startTimeCol = lowerCells.findIndex((c) => c.includes('start'));
       endTimeCol = lowerCells.findIndex((c) => c.includes('end'));
       notesCol = lowerCells.findIndex((c) => c.includes('note') || c.includes('comment'));
+
+      // Explicit Coach Column Index Tracking:
+      // Only columns whose header includes 'assigned', 'coach', or 'umpire' may be treated as coach columns.
+      // If no header row contains those keywords, assignedCoachCols remains empty [].
+      assignedCoachCols = lowerCells
+        .map((c, idx) => ({ c, idx }))
+        .filter(
+          ({ c }) =>
+            c.includes('assigned') ||
+            c.includes('coach') ||
+            c.includes('umpire')
+        )
+        .map(({ idx }) => idx);
+
       continue;
     }
 
@@ -535,9 +606,11 @@ export function parseSpreadsheetSchedule(
       for (const cell of cells) {
         if (cell !== floatCell && cell && !isIgnoredCoachName(cell)) {
           const coachName = cleanCoachName(cell);
-          if (coachName.length > 2 && !coachName.toLowerCase().includes('float')) {
-            floatCoaches.push(coachName);
-            resolveOrCreateCoach(coachName);
+          if (coachName.length > 2 && !coachName.toLowerCase().includes('float') && isValidCoachPersonName(coachName)) {
+            const resolved = resolveOrCreateCoach(coachName);
+            if (resolved) {
+              floatCoaches.push(resolved.name);
+            }
           }
         }
       }
@@ -551,9 +624,11 @@ export function parseSpreadsheetSchedule(
         for (const cell of cells) {
           if (cell && !isIgnoredCoachName(cell)) {
             const coachName = cleanCoachName(cell);
-            if (coachName.length > 2 && !coachName.toLowerCase().includes('float')) {
-              floatCoaches.push(coachName);
-              resolveOrCreateCoach(coachName);
+            if (coachName.length > 2 && !coachName.toLowerCase().includes('float') && isValidCoachPersonName(coachName)) {
+              const resolved = resolveOrCreateCoach(coachName);
+              if (resolved) {
+                floatCoaches.push(resolved.name);
+              }
             }
           }
         }
@@ -660,24 +735,20 @@ export function parseSpreadsheetSchedule(
     }
 
     // Extract Assigned Coaches
+    // Only columns tracked in assignedCoachCols may be scanned.
+    // If no header had coach keywords, assignedCoachCols is empty, so no coaches are extracted from trailing cols.
     const assignedCoachNames: string[] = [];
-    const coachStartCol = Math.max(actualVenueCol, activityCol !== -1 ? activityCol : actualVenueCol) + 1;
-    const coachEndCol =
-      startTimeCol !== -1
-        ? startTimeCol
-        : timeCol !== -1
-        ? timeCol
-        : cells.findIndex((c) => /^\d{1,2}[:.]\d{2}$/.test(c) || /am|pm/i.test(c));
-
-    const maxCol = coachEndCol !== -1 ? coachEndCol : cells.length;
-    for (let c = coachStartCol; c < maxCol; c++) {
-      if (c === notesCol || c === timeCol || c === venueCol || c === actualTeamCol) continue;
-      const val = cells[c]?.trim();
-      if (!val || isIgnoredCoachName(val)) continue;
-      const cleaned = cleanCoachName(val);
-      if (cleaned.length >= 2) {
-        const coach = resolveOrCreateCoach(cleaned);
-        assignedCoachNames.push(coach.name);
+    if (assignedCoachCols.length > 0) {
+      for (const colIdx of assignedCoachCols) {
+        const val = cells[colIdx]?.trim();
+        if (!val || isIgnoredCoachName(val)) continue;
+        const cleaned = cleanCoachName(val);
+        if (cleaned.length >= 2 && isValidCoachPersonName(cleaned)) {
+          const coach = resolveOrCreateCoach(cleaned);
+          if (coach) {
+            assignedCoachNames.push(coach.name);
+          }
+        }
       }
     }
 

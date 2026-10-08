@@ -34,6 +34,7 @@ describe('LocalStoragePersistenceAdapter and Migration Layer', () => {
       expect(STORAGE_KEYS.BLITZ_TOURNAMENTS).toBe('oldalex_blitz_tournaments_v2');
       expect(STORAGE_KEYS.SUN_MODE).toBe('oldalex_sun_mode_v1');
       expect(STORAGE_KEYS.SIDEBAR_COLLAPSED).toBe('oldalex_sidebar_collapsed_v1');
+      expect(STORAGE_KEYS.SELECTED_DATE).toBe('oldalex_selected_date_v2');
     });
   });
 
@@ -154,11 +155,18 @@ describe('LocalStoragePersistenceAdapter and Migration Layer', () => {
       expect(templates[0].id).toBe('tmpl-1');
     });
 
+    it('persists selected_date key via saveKey and retrieves with loadKey', () => {
+      adapter.saveKey('selectedDate', '2026-10-18');
+      expect(localStorage.getItem(STORAGE_KEYS.SELECTED_DATE)).toBe(JSON.stringify('2026-10-18'));
+      expect(adapter.loadKey?.('selectedDate')).toBe('2026-10-18');
+    });
+
     it('ignores unpersisted ephemeral keys gracefully', () => {
-      // Ephemeral keys like activeModal, selectedDate, etc. should not crash saveKey
+      // Ephemeral keys like activeModal, etc. should not crash saveKey
       expect(() => {
         adapter.saveKey('activeModal' as any, 'ADD_SLOT' as any);
       }).not.toThrow();
     });
   });
 });
+

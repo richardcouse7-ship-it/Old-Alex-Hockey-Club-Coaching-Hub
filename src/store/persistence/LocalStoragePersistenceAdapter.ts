@@ -1,6 +1,6 @@
 import { PersistenceAdapter } from './PersistenceAdapter';
 import { AppState } from '../types';
-import { loadValidatedDomainData, safeSetStorage, STORAGE_KEYS } from './migration';
+import { loadValidatedDomainData, safeGetStorage, safeSetStorage, STORAGE_KEYS } from './migration';
 import { StorageService } from '../../services/storageService';
 
 /**
@@ -59,6 +59,7 @@ export class LocalStoragePersistenceAdapter implements PersistenceAdapter {
     if (state.isDirectorUnlocked !== undefined)
       this.saveKey('isDirectorUnlocked', state.isDirectorUnlocked);
     if (state.directorPin !== undefined) this.saveKey('directorPin', state.directorPin);
+    if (state.selectedDate !== undefined) this.saveKey('selectedDate', state.selectedDate);
   }
 
   public saveKey<K extends keyof AppState>(key: K, value: AppState[K]): void {
@@ -117,9 +118,23 @@ export class LocalStoragePersistenceAdapter implements PersistenceAdapter {
       case 'directorPin':
         StorageService.setDirectorPin(value as any);
         break;
+      case 'selectedDate':
+      case 'selected_date' as any:
+        safeSetStorage(STORAGE_KEYS.SELECTED_DATE, value);
+        break;
       default:
         // Ephemeral state keys (navigation, modals, toast) are intentionally unpersisted
         break;
+    }
+  }
+
+  public loadKey<K extends keyof AppState>(key: K): AppState[K] | undefined {
+    switch (key) {
+      case 'selectedDate':
+      case 'selected_date' as any:
+        return safeGetStorage<string | undefined>(STORAGE_KEYS.SELECTED_DATE, undefined) as any;
+      default:
+        return undefined;
     }
   }
 }

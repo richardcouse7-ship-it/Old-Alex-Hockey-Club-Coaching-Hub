@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Trophy,
   Calendar,
@@ -15,10 +15,15 @@ import {
   Flag,
   ChevronRight,
   ExternalLink,
+  FileSpreadsheet,
+  Layers,
+  Sparkles,
 } from 'lucide-react';
-import { MatchFixture, PitchSector, SessionSlot } from '../../types';
+import { AgeGroup, MatchFixture, PitchSector, SessionSlot } from '../../types';
 import { ExportService } from '../../services/exportService';
 import { QuickScoreModal } from './QuickScoreModal';
+import { LeinsterFixturesImportModal } from './LeinsterFixturesImportModal';
+import { useAppStore } from '../../store';
 
 interface FixturesViewProps {
   fixtures: MatchFixture[];
@@ -38,10 +43,33 @@ export const FixturesView: React.FC<FixturesViewProps> = ({
   onShareWhatsApp,
 }) => {
   const [filterType, setFilterType] = useState<'ALL' | 'HOME' | 'AWAY'>('ALL');
+  const [dateScope, setDateScope] = useState<'ALL_SEASON' | 'SELECTED_DATE'>('ALL_SEASON');
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState<'ALL' | AgeGroup>('ALL');
+  const [selectedRankedTeamFilter, setSelectedRankedTeamFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [selectedFixtureForScore, setSelectedFixtureForScore] = useState<MatchFixture | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Discover distinct Training Groups and Ranked Teams from fixtures
+  const availableTrainingGroups = useMemo(() => {
+    const groups = new Set<AgeGroup>();
+    fixtures.forEach((f) => {
+      if (f.trainingGroup) groups.add(f.trainingGroup);
+    });
+    return Array.from(groups);
+  }, [fixtures]);
+
+  const availableRankedTeams = useMemo(() => {
+    const teams = new Set<string>();
+    fixtures.forEach((f) => {
+      if (selectedGroupFilter !== 'ALL' && f.trainingGroup && f.trainingGroup !== selectedGroupFilter) return;
+      if (f.rankedTeam) teams.add(f.rankedTeam);
+      else if (f.ageGroupOrTeam) teams.add(f.ageGroupOrTeam);
+    });
+    return Array.from(teams).sort();
+  }, [fixtures, selectedGroupFilter]);
 
 
   // New fixture form state
@@ -72,20 +100,55 @@ export const FixturesView: React.FC<FixturesViewProps> = ({
     }
   }
 
-  const filteredFixtures = fixtures.filter((f) => {
-    if (filterType === 'HOME' && !f.isHome) return false;
-    if (filterType === 'AWAY' && f.isHome) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        f.ageGroupOrTeam.toLowerCase().includes(q) ||
-        f.opposition.toLowerCase().includes(q) ||
-        f.competition.toLowerCase().includes(q) ||
-        f.venue.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  const filteredFixtures = useMemo(() => {
+    return fixtures
+      .filter((f) => {
+        if (dateScope === 'SELECTED_DATE' && f.date !== selectedDate) return false;
+        if (filterType === 'HOME' && !f.isHome) return false;
+        if (filterType === 'AWAY' && f.isHome) return false;
+        if (selectedGroupFilter !== 'ALL' && f.trainingGroup && f.trainingGroup !== selectedGroupFilter) {
+          return false;
+        }
+        if (selectedRankedTeamFilter !== 'ALL') {
+          const team = f.rankedTeam || f.ageGroupOrTeam;
+          if (team !== selectedRankedTeamFilter) return false;
+        }
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          return (
+            f.ageGroupOrTeam.toLowerCase().includes(q) ||
+            (f.rankedTeam && f.rankedTeam.toLowerCase().includes(q)) ||
+            f.opposition.toLowerCase().includes(q) ||
+            f.competition.toLowerCase().includes(q) ||
+            f.venue.toLowerCase().includes(q) ||
+            f.date.includes(q)
+          );
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.pushbackTime.localeCompare(b.pushbackTime);
+      });
+  }, [
+    fixtures,
+    dateScope,
+    selectedDate,
+    filterType,
+    selectedGroupFilter,
+    selectedRankedTeamFilter,
+    searchQuery,
+  ]);
+
+  const handleLeinsterImport = (imported: MatchFixture[], mode: 'replace' | 'merge') => {
+    const result = useAppStore.getState().importLeinsterSeasonFixtures(imported, mode);
+    onUpdateFixtures(useAppStore.getState().fixtures);
+    setToastMsg(
+      `Imported ${result.importedCount} fixtures (${result.updatedCount} updated, total ${result.totalCount}) across Leinster leagues.`
+    );
+    setTimeout(() => setToastMsg(null), 4500);
+    return result;
+  };
 
   const handleAddFixtureSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,6 +233,14 @@ export const FixturesView: React.FC<FixturesViewProps> = ({
         <div className="flex items-center gap-2.5">
           <button
             type="button"
+            onClick={() => setShowImportModal(true)}
+            className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-md border border-neutral-750 active:scale-95"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-red-500" />
+            <span>Import Leinster Fixtures (CSV)</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setShowAddModal(true)}
             className="px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95"
           >
@@ -196,48 +267,135 @@ export const FixturesView: React.FC<FixturesViewProps> = ({
         </div>
       )}
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-black p-3.5 rounded-xl border border-neutral-800">
-        <div className="flex items-center gap-1 bg-neutral-900 p-1 rounded-lg border border-neutral-750">
-          <button
-            type="button"
-            onClick={() => setFilterType('ALL')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
-              filterType === 'ALL' ? 'bg-red-600 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            All Matches ({fixtures.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType('HOME')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
-              filterType === 'HOME' ? 'bg-red-600 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            Home at Milltown ({homeCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterType('AWAY')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
-              filterType === 'AWAY' ? 'bg-red-600 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
-            }`}
-          >
-            Away ({awayCount})
-          </button>
+      {/* Scope, Home/Away, Training Group & Search Controls */}
+      <div className="space-y-3 bg-black p-4 rounded-2xl border border-neutral-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Date Scope & Home/Away Pills */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 bg-neutral-900 p-1 rounded-lg border border-neutral-750">
+              <button
+                type="button"
+                onClick={() => setDateScope('ALL_SEASON')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
+                  dateScope === 'ALL_SEASON' ? 'bg-red-600 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Full Season ({fixtures.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateScope('SELECTED_DATE')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
+                  dateScope === 'SELECTED_DATE' ? 'bg-red-600 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Sunday {selectedDate}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1 bg-neutral-900 p-1 rounded-lg border border-neutral-750">
+              <button
+                type="button"
+                onClick={() => setFilterType('ALL')}
+                className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-colors ${
+                  filterType === 'ALL' ? 'bg-neutral-800 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                All Venues
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterType('HOME')}
+                className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-colors ${
+                  filterType === 'HOME' ? 'bg-neutral-800 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Home ({homeCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterType('AWAY')}
+                className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-colors ${
+                  filterType === 'AWAY' ? 'bg-neutral-800 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Away ({awayCount})
+              </button>
+            </div>
+          </div>
+
+          <div className="relative w-full sm:w-64">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search team, opposition, venue..."
+              className="w-full pl-8 pr-3 py-1.5 bg-neutral-900 border border-neutral-750 rounded-lg text-xs text-white placeholder-neutral-400 focus:outline-none focus:border-red-500"
+            />
+          </div>
         </div>
 
-        <div className="relative w-full sm:w-64">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search team, opposition, venue..."
-            className="w-full pl-8 pr-3 py-1.5 bg-neutral-900 border border-neutral-750 rounded-lg text-xs text-white placeholder-neutral-400 focus:outline-none focus:border-red-500"
-          />
-        </div>
+        {/* Training Group & Multi-Ranked Team Filter Row */}
+        {availableTrainingGroups.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-neutral-850">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] uppercase font-bold text-neutral-400 mr-1 flex items-center gap-1">
+                <Users className="w-3 h-3 text-red-500" />
+                Training Groups:
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedGroupFilter('ALL');
+                  setSelectedRankedTeamFilter('ALL');
+                }}
+                className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${
+                  selectedGroupFilter === 'ALL'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
+                }`}
+              >
+                All Groups
+              </button>
+              {availableTrainingGroups.map((group) => (
+                <button
+                  key={group}
+                  type="button"
+                  onClick={() => {
+                    setSelectedGroupFilter(group);
+                    setSelectedRankedTeamFilter('ALL');
+                  }}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-md border transition-all ${
+                    selectedGroupFilter === group
+                      ? 'bg-red-600 border-red-500 text-white'
+                      : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:border-neutral-700'
+                  }`}
+                >
+                  {group}
+                </button>
+              ))}
+            </div>
+
+            {availableRankedTeams.length > 0 && (
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] uppercase font-bold text-neutral-400">Ranked Squad:</span>
+                <select
+                  value={selectedRankedTeamFilter}
+                  onChange={(e) => setSelectedRankedTeamFilter(e.target.value)}
+                  className="bg-neutral-900 border border-neutral-750 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-red-500"
+                >
+                  <option value="ALL">All Ranked Squads ({availableRankedTeams.length})</option>
+                  {availableRankedTeams.map((team) => (
+                    <option key={team} value={team}>
+                      {team}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Fixtures Grid */}
@@ -254,9 +412,9 @@ export const FixturesView: React.FC<FixturesViewProps> = ({
             {/* Card Header */}
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="text-[10px] font-mono-data text-red-500 font-bold uppercase tracking-wider">
-                    {fix.competition}
+                    {fix.competition} {fix.round ? `· ${fix.round}` : ''}
                   </span>
                   <span className="text-neutral-600">·</span>
                   <span
@@ -268,9 +426,14 @@ export const FixturesView: React.FC<FixturesViewProps> = ({
                   >
                     {fix.isHome ? 'HOME (Milltown)' : 'AWAY'}
                   </span>
+                  {fix.trainingGroup && (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-neutral-900 text-neutral-300 border border-neutral-750">
+                      {fix.trainingGroup}
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-lg font-bold text-white tracking-tight">
-                  {fix.ageGroupOrTeam}
+                  {fix.rankedTeam || fix.ageGroupOrTeam}
                 </h3>
                 <p className="text-xs text-neutral-300 mt-0.5 font-medium">
                   vs <strong className="text-white">{fix.opposition}</strong>
@@ -544,6 +707,13 @@ export const FixturesView: React.FC<FixturesViewProps> = ({
         onClose={() => setSelectedFixtureForScore(null)}
         fixture={selectedFixtureForScore}
         onSaveResult={handleSaveScoreFromModal}
+      />
+
+      {/* Leinster Season Fixtures Importer Modal */}
+      <LeinsterFixturesImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleLeinsterImport}
       />
 
       {toastMsg && (

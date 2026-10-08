@@ -5,6 +5,7 @@ import {
   normalizeAgeGroup,
   isIgnoredCoachName,
   cleanCoachName,
+  isValidCoachPersonName,
   SAMPLE_WEEKLY_SPREADSHEET_TEXT,
 } from '../scheduleImportParser';
 import { COACHES } from '../../data/initialData';
@@ -49,6 +50,42 @@ describe('scheduleImportParser', () => {
       expect(cleanCoachName('  Josh Gill  ')).toBe('Josh Gill');
       expect(cleanCoachName('Daisy Dillon M...')).toBe('Daisy Dillon M');
       expect(cleanCoachName('"Katie Mullan"')).toBe('Katie Mullan');
+    });
+
+    it('isValidCoachPersonName strictly validates human names and rejects non-person cells', () => {
+      // Valid coach person names
+      expect(isValidCoachPersonName('Richard Couse')).toBe(true);
+      expect(isValidCoachPersonName('Daisy Dillon Mansfield')).toBe(true);
+      expect(isValidCoachPersonName('Violet O\'Neill')).toBe(true);
+      expect(isValidCoachPersonName('Anya')).toBe(true); // Whitelisted single name
+
+      // Times and time indicators
+      expect(isValidCoachPersonName('2:00pm')).toBe(false);
+      expect(isValidCoachPersonName('11:00am')).toBe(false);
+      expect(isValidCoachPersonName('11:10 am')).toBe(false);
+      expect(isValidCoachPersonName('10:30')).toBe(false);
+
+      // Match and division indicators
+      expect(isValidCoachPersonName('v Glenanne (Div 6)')).toBe(false);
+      expect(isValidCoachPersonName('v Pembroke (Div 1)')).toBe(false);
+      expect(isValidCoachPersonName('vs Bray')).toBe(false);
+      expect(isValidCoachPersonName('Div 6')).toBe(false);
+
+      // Notes and venue keywords
+      expect(isValidCoachPersonName('BIBS and WHITE SOCKS')).toBe(false);
+      expect(isValidCoachPersonName('St Mark\'s')).toBe(false);
+      expect(isValidCoachPersonName('Serpentine Ave')).toBe(false);
+      expect(isValidCoachPersonName('Loreto Beaufort')).toBe(false);
+      expect(isValidCoachPersonName('Temple Carrig')).toBe(false);
+      expect(isValidCoachPersonName('Our Lady\'s school Terenure')).toBe(false);
+      expect(isValidCoachPersonName('Home')).toBe(false);
+      expect(isValidCoachPersonName('Away')).toBe(false);
+      expect(isValidCoachPersonName('Training (to be split Inter Mx to decide)')).toBe(false);
+      expect(isValidCoachPersonName('Start time updated per follow-up emails')).toBe(false);
+
+      // Single-word non-whitelisted strings
+      expect(isValidCoachPersonName('Inter')).toBe(false);
+      expect(isValidCoachPersonName('Training')).toBe(false);
     });
   });
 
@@ -271,6 +308,41 @@ Away,Minor C,v Loreto (Div 7),Loreto Beaufort,11:15am,BIBS and WHITE SOCKS`;
       expect(brayFixture?.pushbackTime).toBe('16:00');
       expect(brayFixture?.venue).toContain('Temple Carrig');
       expect(brayFixture?.competition).toContain('Div 1');
+
+      // 9. Coach Hardening & No Erroneous Coach Creation
+      // The provisional CSV has no 'assigned', 'coach', or 'umpire' column headers.
+      // It must produce exactly 0 new coaches and 0 assigned coaches.
+      expect(result.newCoaches.length).toBe(0);
+      expect(result.newCoaches).toEqual([]);
+      expect(result.slots.every((s) => s.assignedCoachIds.length === 0)).toBe(true);
+      expect(result.rows.every((r) => r.assignedCoachNames.length === 0)).toBe(true);
+
+      // Verify that times, venues, opposition names, and notes were never converted into coaches
+      const invalidKeywords = [
+        "2:00pm",
+        "St Mark's",
+        "BIBS and WHITE SOCKS",
+        "v Glenanne (Div 6)",
+        "Home",
+        "Away",
+        "Serpentine Ave",
+        "Loreto Beaufort",
+        "Temple Carrig",
+      ];
+      for (const keyword of invalidKeywords) {
+        expect(result.newCoaches.some((c) => c.name.toLowerCase() === keyword.toLowerCase())).toBe(false);
+      }
+    });
+
+    it('verifies times, venues, opposition, and notes are never converted into coaches even if trailing columns exist', () => {
+      const csvWithTrailingNotes = `Home/Away,Group,Activity/Opponent,Venue,Time,Notes
+Away,6th class C,v Glenanne (Div 6),St Mark's,11:10am,Start time updated per follow-up emails
+Away,Minor C,v Loreto (Div 7),Loreto Beaufort,11:15am,BIBS and WHITE SOCKS`;
+
+      const result = parseSpreadsheetSchedule(csvWithTrailingNotes, COACHES, '2026-10-11');
+      expect(result.newCoaches.length).toBe(0);
+      expect(result.newCoaches).toEqual([]);
+      expect(result.slots.every((s) => s.assignedCoachIds.length === 0)).toBe(true);
     });
   });
 });

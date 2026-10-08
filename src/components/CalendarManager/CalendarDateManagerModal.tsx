@@ -13,10 +13,12 @@ import {
   FastForward,
   Rewind,
   CalendarDays,
+  Archive,
 } from 'lucide-react';
 import { SessionSlot } from '../../types';
 import { useAppStore } from '../../store';
 import { SEASON_SUNDAYS } from '../../data/seasonCalendar';
+import { categorizeSeasonSundays } from '../../utils/dateUtils';
 
 interface CalendarDateManagerModalProps {
   isOpen: boolean;
@@ -53,6 +55,12 @@ export const CalendarDateManagerModal: React.FC<CalendarDateManagerModalProps> =
   // Duplicate state
   const [duplicateTargetDate, setDuplicateTargetDate] = useState('2026-09-20');
 
+  // Season calendar filter (Upcoming vs Archive)
+  const [calendarViewMode, setCalendarViewMode] = useState<'upcoming' | 'archive'>('upcoming');
+
+  const { upcomingSundays, pastSundays, currentWeekSundayISO } = categorizeSeasonSundays();
+  const isSelectedDateArchived = selectedDate < currentWeekSundayISO;
+
   if (!isOpen) return null;
 
   const currentDaySlots = allSlots.filter((s) => s.date === selectedDate);
@@ -82,6 +90,13 @@ export const CalendarDateManagerModal: React.FC<CalendarDateManagerModalProps> =
       return;
     }
 
+    if (duplicateTargetDate < currentWeekSundayISO) {
+      const confirmArchivedOverwrite = window.confirm(
+        `Target date ${duplicateTargetDate} is a past/archived Sunday. Are you sure you want to duplicate into archived history?`
+      );
+      if (!confirmArchivedOverwrite) return;
+    }
+
     duplicateSchedule(selectedDate, duplicateTargetDate);
     onChangeDate(duplicateTargetDate);
     showToast(
@@ -92,6 +107,12 @@ export const CalendarDateManagerModal: React.FC<CalendarDateManagerModalProps> =
 
   // Handle timing shift
   const handleExecuteShift = (deltaMinutes: number) => {
+    if (isSelectedDateArchived) {
+      const confirmShift = window.confirm(
+        `You are modifying ${selectedDate}, which is an archived Sunday. Are you sure you want to shift timings for historical data?`
+      );
+      if (!confirmShift) return;
+    }
     shiftTimings(selectedDate, deltaMinutes);
     showToast(
       `Shifted all sessions for ${selectedDate} by ${deltaMinutes > 0 ? `+${deltaMinutes}` : deltaMinutes} minutes!`
@@ -100,6 +121,13 @@ export const CalendarDateManagerModal: React.FC<CalendarDateManagerModalProps> =
 
   // Handle clear date
   const handleClearCurrentDate = () => {
+    if (isSelectedDateArchived) {
+      const confirmArchiveClear = window.confirm(
+        `WARNING: ${selectedDate} is a past/archived Sunday. Are you certain you want to clear historical records for this date?`
+      );
+      if (!confirmArchiveClear) return;
+    }
+
     if (
       window.confirm(
         `Are you sure you want to clear all ${currentDaySlots.length} sessions scheduled for ${selectedDate}?`
@@ -240,19 +268,48 @@ export const CalendarDateManagerModal: React.FC<CalendarDateManagerModalProps> =
                 </div>
               </form>
 
-              {/* Full 2026/2027 Season Sundays Directory */}
+              {/* Full 2026/2027 Season Sundays Directory with Upcoming / Past Tabs */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-white uppercase font-mono-data tracking-wider">
-                    Official 2026/2027 Sunday Fixture Calendar
-                  </span>
-                  <span className="text-[11px] text-neutral-400">
-                    Click any Sunday to open its timetable
-                  </span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                  <div>
+                    <span className="text-xs font-bold text-white uppercase font-mono-data tracking-wider">
+                      Official 2026/2027 Sunday Fixture Calendar
+                    </span>
+                    <p className="text-[11px] text-neutral-400">
+                      Click any Sunday to open its timetable
+                    </p>
+                  </div>
+
+                  {/* Sub-toggle: Upcoming vs Past (Archive) */}
+                  <div className="inline-flex items-center p-1 bg-neutral-900 border border-neutral-800 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setCalendarViewMode('upcoming')}
+                      className={`px-3 py-1 text-xs rounded-lg font-semibold transition-all ${
+                        calendarViewMode === 'upcoming'
+                          ? 'bg-red-600 text-white shadow-sm'
+                          : 'text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      Upcoming Sundays ({upcomingSundays.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarViewMode('archive')}
+                      className={`px-3 py-1 text-xs rounded-lg font-semibold flex items-center gap-1 transition-all ${
+                        calendarViewMode === 'archive'
+                          ? 'bg-amber-600/80 text-white shadow-sm'
+                          : 'text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      <Archive className="w-3 h-3 text-amber-300" />
+                      <span>Past Sundays (Archive) ({pastSundays.length})</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-80 overflow-y-auto pr-1">
-                  {SEASON_SUNDAYS.map((sun) => {
+                  {(calendarViewMode === 'upcoming' ? upcomingSundays : pastSundays).map((sun) => {
                     const isCurrent = sun.date === selectedDate;
                     const sessionCount = allSlots.filter((s) => s.date === sun.date).length;
 
@@ -268,6 +325,8 @@ export const CalendarDateManagerModal: React.FC<CalendarDateManagerModalProps> =
                         className={`p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
                           isCurrent
                             ? 'bg-red-950/60 border-red-500 text-white shadow-md'
+                            : sun.status === 'Archived'
+                            ? 'bg-neutral-950/80 border-neutral-800/80 text-neutral-400 hover:text-neutral-200 hover:border-neutral-700'
                             : 'bg-neutral-950 border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-700'
                         }`}
                       >
@@ -277,6 +336,16 @@ export const CalendarDateManagerModal: React.FC<CalendarDateManagerModalProps> =
                             {isCurrent && (
                               <span className="text-[9px] bg-red-600 text-white px-1.5 py-0.2 rounded font-bold">
                                 Active
+                              </span>
+                            )}
+                            {sun.status === 'This Sunday' && !isCurrent && (
+                              <span className="text-[9px] bg-emerald-600 text-white px-1.5 py-0.2 rounded font-bold">
+                                This Sunday
+                              </span>
+                            )}
+                            {sun.status === 'Archived' && !isCurrent && (
+                              <span className="text-[9px] bg-neutral-800 text-neutral-400 px-1.5 py-0.2 rounded font-medium">
+                                Archived
                               </span>
                             )}
                           </div>
@@ -341,11 +410,22 @@ export const CalendarDateManagerModal: React.FC<CalendarDateManagerModalProps> =
                       onChange={(e) => setDuplicateTargetDate(e.target.value)}
                       className="w-full p-2.5 bg-black border border-neutral-700 text-white rounded-xl text-xs focus:outline-none focus:border-red-500"
                     >
-                      {SEASON_SUNDAYS.filter((s) => s.date !== selectedDate).map((sun) => (
-                        <option key={sun.date} value={sun.date}>
-                          {sun.label} — {sun.note}
-                        </option>
-                      ))}
+                      <optgroup label="Upcoming Sundays" className="bg-neutral-900 text-white font-bold">
+                        {upcomingSundays.filter((s) => s.date !== selectedDate).map((sun) => (
+                          <option key={sun.date} value={sun.date} className="bg-neutral-900 text-white font-normal">
+                            {sun.label} — {sun.note}
+                          </option>
+                        ))}
+                      </optgroup>
+                      {pastSundays.length > 0 && (
+                        <optgroup label="Past Sundays (Archive)" className="bg-neutral-900 text-amber-400 font-bold">
+                          {pastSundays.filter((s) => s.date !== selectedDate).map((sun) => (
+                            <option key={sun.date} value={sun.date} className="bg-neutral-900 text-neutral-400 font-normal">
+                              {sun.label} (Archived) — {sun.note}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
                     </select>
                   </div>
                 </div>

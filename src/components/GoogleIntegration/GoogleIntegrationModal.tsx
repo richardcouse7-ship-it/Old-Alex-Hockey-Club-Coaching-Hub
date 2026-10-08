@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Mail,
@@ -50,12 +50,17 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
   const [driveBackups, setDriveBackups] = useState<GoogleDriveBackupFile[]>([]);
   const [showSetupGuide, setShowSetupGuide] = useState(false);
   const [lastBackupSuccess, setLastBackupSuccess] = useState<string | null>(null);
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const [isClientIdMissing, setIsClientIdMissing] = useState(false);
+  const clientIdInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       const current = GoogleIntegrationService.getAuthStatus();
       setAuthStatus(current);
       setClientIdInput(GoogleIntegrationService.getClientId());
+      setConnectError(null);
+      setIsClientIdMissing(false);
       if (current.isSignedIn) {
         loadDriveBackups();
       }
@@ -65,15 +70,32 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
   if (!isOpen) return null;
 
   const handleSaveClientId = () => {
+    if (!clientIdInput.trim()) {
+      setConnectError('Please enter a valid Google OAuth Client ID.');
+      setIsClientIdMissing(true);
+      return;
+    }
+    setConnectError(null);
+    setIsClientIdMissing(false);
     GoogleIntegrationService.setClientId(clientIdInput);
     showToast('Google OAuth Client ID saved!');
   };
 
   const handleConnect = async () => {
     if (!clientIdInput.trim()) {
-      showToast('Please enter your Google OAuth Client ID first.');
+      const msg = 'Please enter your Google OAuth Client ID first.';
+      setConnectError(msg);
+      setIsClientIdMissing(true);
+      setShowSetupGuide(true);
+      showToast(msg);
+      setTimeout(() => {
+        clientIdInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        clientIdInputRef.current?.focus();
+      }, 100);
       return;
     }
+    setConnectError(null);
+    setIsClientIdMissing(false);
     GoogleIntegrationService.setClientId(clientIdInput);
     setIsConnecting(true);
     try {
@@ -82,7 +104,9 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
       showToast(`Connected as ${status.userEmail || AUTHORIZED_DIRECTOR_EMAIL}!`);
       loadDriveBackups();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Google authorization failed.');
+      const msg = err instanceof Error ? err.message : 'Google authorization failed.';
+      setConnectError(msg);
+      showToast(msg);
     } finally {
       setIsConnecting(false);
     }
@@ -92,6 +116,8 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
     GoogleIntegrationService.signOut();
     setAuthStatus(GoogleIntegrationService.getAuthStatus());
     setDriveBackups([]);
+    setConnectError(null);
+    setIsClientIdMissing(false);
     showToast('Disconnected from Google.');
   };
 
@@ -215,74 +241,96 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
         <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 text-xs">
           {/* Account Status Card */}
           <div
-            className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+            className={`p-4 rounded-2xl border flex flex-col justify-between gap-4 transition-colors ${
               authStatus.isSignedIn
                 ? isDirector
                   ? 'bg-emerald-950/30 border-emerald-800/50'
                   : 'bg-amber-950/30 border-amber-800/50'
-                : 'bg-neutral-950 border-neutral-800'
+                : connectError
+                  ? 'bg-red-950/20 border-red-800/60'
+                  : 'bg-neutral-950 border-neutral-800'
             }`}
           >
-            <div className="flex items-center gap-3.5">
-              {authStatus.userPicture ? (
-                <img
-                  src={authStatus.userPicture}
-                  alt={authStatus.userName || 'Director'}
-                  className="w-12 h-12 rounded-full border-2 border-emerald-500/60 shadow-md"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-2xl bg-neutral-850 border border-neutral-750 flex items-center justify-center text-neutral-400 font-bold text-base">
-                  RC
-                </div>
-              )}
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-white text-sm">
-                    {authStatus.userName || 'Richard Couse'}
-                  </span>
-                  {authStatus.isSignedIn && (
-                    <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full font-mono flex items-center gap-1">
-                      <Check className="w-3 h-3 text-emerald-400" /> Active Sync
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                {authStatus.userPicture ? (
+                  <img
+                    src={authStatus.userPicture}
+                    alt={authStatus.userName || 'Director'}
+                    className="w-12 h-12 rounded-full border-2 border-emerald-500/60 shadow-md"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-2xl bg-neutral-850 border border-neutral-750 flex items-center justify-center text-neutral-400 font-bold text-base">
+                    RC
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-sm">
+                      {authStatus.userName || 'Richard Couse'}
                     </span>
+                    {authStatus.isSignedIn && (
+                      <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full font-mono flex items-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-400" /> Active Sync
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-neutral-400 mt-0.5 font-mono">
+                    {authStatus.userEmail || AUTHORIZED_DIRECTOR_EMAIL}
+                  </p>
+                  {!isDirector && (
+                    <p className="text-[11px] text-amber-400 flex items-center gap-1 mt-1">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      Notice: Authorized specifically for {AUTHORIZED_DIRECTOR_EMAIL}.
+                    </p>
                   )}
                 </div>
-                <p className="text-neutral-400 mt-0.5 font-mono">
-                  {authStatus.userEmail || AUTHORIZED_DIRECTOR_EMAIL}
-                </p>
-                {!isDirector && (
-                  <p className="text-[11px] text-amber-400 flex items-center gap-1 mt-1">
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    Notice: Authorized specifically for {AUTHORIZED_DIRECTOR_EMAIL}.
-                  </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {authStatus.isSignedIn ? (
+                  <button
+                    type="button"
+                    onClick={handleDisconnect}
+                    className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-850 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-750 transition-all cursor-pointer"
+                  >
+                    Disconnect
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleConnect}
+                    disabled={isConnecting}
+                    className="px-4 py-2 text-xs font-bold rounded-xl bg-red-600 hover:bg-red-500 text-white flex items-center gap-2 shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isConnecting ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Cloud className="w-4 h-4" />
+                    )}
+                    <span>Connect Google Account</span>
+                  </button>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              {authStatus.isSignedIn ? (
-                <button
-                  type="button"
-                  onClick={handleDisconnect}
-                  className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-850 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-750 transition-all"
-                >
-                  Disconnect
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleConnect}
-                  disabled={isConnecting}
-                  className="px-4 py-2 text-xs font-bold rounded-xl bg-red-600 hover:bg-red-500 text-white flex items-center gap-2 shadow-md transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {isConnecting ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Cloud className="w-4 h-4" />
+            {/* Inline Error State Feedback */}
+            {connectError && (
+              <div
+                role="alert"
+                className="flex items-start gap-2.5 p-3 bg-red-950/60 border border-red-800 rounded-xl text-red-200 text-xs animate-in fade-in"
+              >
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-semibold">{connectError}</span>
+                  {isClientIdMissing && (
+                    <p className="text-[11px] text-red-300/90 mt-0.5">
+                      OAuth Client ID is required to connect Google Drive and Gmail. Please enter your Client ID in the credentials section below.
+                    </p>
                   )}
-                  <span>Connect Google Account</span>
-                </button>
-              )}
-            </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Quick Dual Features: Drive Backups + Gmail Actions */}
@@ -438,7 +486,14 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
           )}
 
           {/* Google Cloud API Client ID Configuration (Accordion) */}
-          <div className="p-5 bg-neutral-950 border border-neutral-800 rounded-2xl space-y-3">
+          <div
+            id="google-oauth-credentials-section"
+            className={`p-5 bg-neutral-950 border rounded-2xl space-y-3 transition-colors ${
+              isClientIdMissing
+                ? 'border-red-500/80 ring-1 ring-red-500/40 shadow-lg shadow-red-950/20'
+                : 'border-neutral-800'
+            }`}
+          >
             <button
               type="button"
               className="w-full flex items-center justify-between cursor-pointer text-left transition-all active:scale-95"
@@ -446,7 +501,7 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
             >
               <div className="flex items-center gap-2 text-white font-bold">
                 <Key className="w-4 h-4 text-amber-400" />
-                <span>Google Cloud OAuth Credentials (Optional for Direct API Calls)</span>
+                <span>Google Cloud OAuth Credentials (Required for Account & Drive Sync)</span>
               </div>
               {showSetupGuide ? (
                 <ChevronUp className="w-4 h-4 text-neutral-400" />
@@ -456,25 +511,43 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
             </button>
 
             <p className="text-neutral-400 leading-relaxed">
-              <strong>Direct Gmail Web Compose</strong> works instantly with zero setup. If you want the app to automatically create Google Drive folders, upload backups in the background, or send emails via the Gmail API, add your Google Cloud Client ID below.
+              <strong>Direct Gmail Web Compose</strong> works instantly with zero setup. To connect your Google Account, enable 1-tap Google Drive vault backups, or dispatch via the Gmail API, enter your Google Cloud Client ID below.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <input
+                ref={clientIdInputRef}
                 type="text"
                 value={clientIdInput}
-                onChange={(e) => setClientIdInput(e.target.value)}
+                onChange={(e) => {
+                  setClientIdInput(e.target.value);
+                  if (connectError) setConnectError(null);
+                  if (isClientIdMissing) setIsClientIdMissing(false);
+                }}
                 placeholder="e.g. 123456789-abcdef.apps.googleusercontent.com"
-                className="flex-1 px-3.5 py-2.5 rounded-xl bg-neutral-900 border border-neutral-750 text-white placeholder-neutral-500 font-mono text-xs focus:outline-none focus:border-red-500"
+                aria-invalid={isClientIdMissing}
+                aria-describedby={isClientIdMissing ? 'client-id-inline-error' : undefined}
+                className={`flex-1 px-3.5 py-2.5 rounded-xl bg-neutral-900 border text-white placeholder-neutral-500 font-mono text-xs focus:outline-none transition-colors ${
+                  isClientIdMissing
+                    ? 'border-red-500 focus:border-red-400'
+                    : 'border-neutral-750 focus:border-red-500'
+                }`}
               />
               <button
                 type="button"
                 onClick={handleSaveClientId}
-                className="px-4 py-2.5 text-xs font-bold rounded-xl bg-neutral-850 hover:bg-neutral-800 text-white border border-neutral-700 shrink-0"
+                className="px-4 py-2.5 text-xs font-bold rounded-xl bg-neutral-850 hover:bg-neutral-800 text-white border border-neutral-700 shrink-0 cursor-pointer"
               >
                 Save Client ID
               </button>
             </div>
+
+            {isClientIdMissing && (
+              <p id="client-id-inline-error" className="text-red-400 text-[11px] flex items-center gap-1.5 font-medium">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>OAuth Client ID is required to connect your Google Account. Enter your ID above or follow the setup guide below.</span>
+              </p>
+            )}
 
             {showSetupGuide && (
               <div className="p-4 bg-neutral-900/70 border border-neutral-800 rounded-xl space-y-2.5 text-neutral-300 text-[11px] leading-relaxed">

@@ -11,9 +11,15 @@ import {
   UserPlus,
   Grid,
   List,
+  Sparkles,
+  RotateCcw,
+  RefreshCw,
 } from 'lucide-react';
 import { Coach, CoachAvailability, CoachAvailabilityStatus, SessionSlot } from '../../types';
 import { ExportService } from '../../services/exportService';
+import { COACHES } from '../../data/initialData';
+import { syncWithMasterRoster } from '../../store/persistence/migration';
+import { isValidCoachPersonName } from '../../utils/scheduleImportParser';
 import { AddEditCoachModal } from './AddEditCoachModal';
 import {
   CoachMetricsBar,
@@ -239,6 +245,99 @@ export const CoachAvailabilityView: React.FC<CoachAvailabilityViewProps> = ({
     showNotification(`Removed ${coachToDelete?.name || 'coach'} from roster.`);
   };
 
+  // One-Click Roster Sanitization Handlers
+  const handleCleanInvalidCoaches = () => {
+    // Known non-person test or failed isValidCoachPersonName
+    const invalidCoachIds = new Set(
+      coaches
+        .filter((c) => !isValidCoachPersonName(c.name))
+        .map((c) => c.id)
+    );
+
+    const corruptCount = invalidCoachIds.size;
+    if (corruptCount === 0) {
+      showNotification('Roster is already clean! No invalid coach profiles detected.');
+      return;
+    }
+
+    // 1. Filter out invalid coach profiles
+    const cleanedCoaches = coaches.filter((c) => !invalidCoachIds.has(c.id));
+    onUpdateCoaches(cleanedCoaches);
+
+    // 2. Remove from availability
+    const cleanedAv = availability.filter((a) => !invalidCoachIds.has(a.coachId));
+    onUpdateAvailability(cleanedAv);
+
+    // 3. Remove from all SessionSlot.assignedCoachIds across all dates
+    const cleanedSlots = slots.map((s) => {
+      const remainingCoachIds = s.assignedCoachIds.filter((id) => !invalidCoachIds.has(id));
+      if (remainingCoachIds.length !== s.assignedCoachIds.length) {
+        return {
+          ...s,
+          assignedCoachIds: remainingCoachIds,
+          status: remainingCoachIds.length === 0 ? ('Needs Coach' as const) : s.status,
+        };
+      }
+      return s;
+    });
+
+    if (onUpdateSlots) {
+      onUpdateSlots(cleanedSlots);
+    }
+
+    // Clean up local selection
+    setSelectedCoachIds((prev) => prev.filter((id) => !invalidCoachIds.has(id)));
+
+    // Display required notification toast
+    showNotification(`Removed ${corruptCount} corrupt coach profiles and updated session slots!`, 5000);
+  };
+
+  const handleSyncMasterRoster = () => {
+    const merged = syncWithMasterRoster(coaches, COACHES);
+    const addedCount = merged.length - coaches.length;
+
+    if (addedCount > 0) {
+      onUpdateCoaches(merged);
+      showNotification(`Master roster synchronized! Added ${addedCount} new coaches (Total: ${merged.length}).`, 5000);
+    } else {
+      showNotification(`Master roster is already up to date (${coaches.length} coaches).`, 4000);
+    }
+  };
+
+  const handleResetToOfficialRoster = () => {
+    const officialIds = new Set(COACHES.map((c) => c.id));
+    const removedCoachIds = new Set(
+      coaches.filter((c) => !officialIds.has(c.id)).map((c) => c.id)
+    );
+
+    onUpdateCoaches(COACHES);
+
+    // Clean up availability records for removed non-official coaches
+    if (removedCoachIds.size > 0) {
+      const cleanedAv = availability.filter((a) => !removedCoachIds.has(a.coachId));
+      onUpdateAvailability(cleanedAv);
+
+      const cleanedSlots = slots.map((s) => {
+        const remainingCoachIds = s.assignedCoachIds.filter((id) => !removedCoachIds.has(id));
+        if (remainingCoachIds.length !== s.assignedCoachIds.length) {
+          return {
+            ...s,
+            assignedCoachIds: remainingCoachIds,
+            status: remainingCoachIds.length === 0 ? ('Needs Coach' as const) : s.status,
+          };
+        }
+        return s;
+      });
+
+      if (onUpdateSlots) {
+        onUpdateSlots(cleanedSlots);
+      }
+    }
+
+    setSelectedCoachIds([]);
+    showNotification(`Reset coaching roster to Official ${COACHES.length} profiles!`, 5000);
+  };
+
   // Multi-selection helper handlers
   const handleToggleSelectCoach = (coachId: string) => {
     setSelectedCoachIds((prev) =>
@@ -373,6 +472,36 @@ export const CoachAvailabilityView: React.FC<CoachAvailabilityViewProps> = ({
           >
             <Share2 className="w-4 h-4 text-emerald-400" />
             <span>WhatsApp Callout</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCleanInvalidCoaches}
+            className="px-3.5 py-2 text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95"
+            title="Clean corrupt/invalid coach profiles (e.g. venues, times, match notes) from roster and slots"
+          >
+            <Sparkles className="w-4 h-4 text-amber-200" />
+            <span>Clean Invalid Coach Profiles</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSyncMasterRoster}
+            className="px-3.5 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95"
+            title="Non-destructively sync master club coach roster to import newly registered coaches"
+          >
+            <RefreshCw className="w-4 h-4 text-emerald-100" />
+            <span>Sync Master Roster</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResetToOfficialRoster}
+            className="px-3.5 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-850 border border-neutral-750 text-neutral-300 hover:text-white rounded-xl flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+            title={`Reset roster back to the official ${COACHES.length} Old Alex coaches`}
+          >
+            <RotateCcw className="w-4 h-4 text-neutral-400" />
+            <span>Reset to Official {COACHES.length} Roster</span>
           </button>
 
           <button

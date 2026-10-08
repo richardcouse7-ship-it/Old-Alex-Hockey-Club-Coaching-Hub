@@ -16,4 +16,9 @@ export interface PersistenceAdapter {
    * Persists a single domain key directly for granular updates.
    */
   saveKey<K extends keyof AppState>(key: K, value: AppState[K]): void;
+
+  /**
+   * Loads a single key from storage medium, or returns undefined if not set.
+   */
+  loadKey?<K extends keyof AppState>(key: K): AppState[K] | undefined;
 }

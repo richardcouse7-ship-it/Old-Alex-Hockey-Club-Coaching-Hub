@@ -19,9 +19,11 @@ import {
   Moon,
   PanelLeftClose,
   PanelLeft,
+  Archive,
 } from 'lucide-react';
 import { AppNotification } from '../types';
 import { SEASON_SUNDAYS } from '../data/seasonCalendar';
+import { categorizeSeasonSundays } from '../utils/dateUtils';
 
 interface HeaderProps {
   onOpenMobileSidebar: () => void;
@@ -74,6 +76,9 @@ export const Header: React.FC<HeaderProps> = ({
     onChangeDate(newDateStr);
   };
 
+  const { upcomingSundays, pastSundays, currentWeekSundayISO } = categorizeSeasonSundays();
+  const isPastArchivedDate = selectedDate < currentWeekSundayISO;
+
   return (
     <header className="sticky top-0 z-30 bg-black/95 backdrop-blur-md border-b border-neutral-800 px-4 sm:px-8 py-3 flex items-center justify-between">
       {/* Left Slot: Mobile Menu Trigger + Club Title */}
@@ -114,22 +119,38 @@ export const Header: React.FC<HeaderProps> = ({
 
           <Calendar className="w-3.5 h-3.5 text-red-500 shrink-0 ml-0.5" />
 
-          {/* Full Season Sunday Dropdown */}
+          {/* Full Season Sunday Dropdown with Optgroups */}
           <select
             value={selectedDate}
             onChange={(e) => onChangeDate(e.target.value)}
             className="bg-transparent text-white font-semibold cursor-pointer focus:outline-none max-w-[140px] sm:max-w-[180px] truncate"
+            aria-label="Select Sunday"
           >
-            {SEASON_SUNDAYS.map((sun) => (
-              <option key={sun.date} value={sun.date} className="bg-neutral-900 text-white">
-                {sun.label}
-              </option>
-            ))}
+            <optgroup label="Active & Upcoming Sundays" className="bg-neutral-900 text-neutral-300 font-bold">
+              {upcomingSundays.map((sun) => (
+                <option key={sun.date} value={sun.date} className="bg-neutral-900 text-white font-normal">
+                  {sun.date === currentWeekSundayISO ? `${sun.label} (This Sunday)` : sun.label}
+                </option>
+              ))}
+            </optgroup>
+
+            {pastSundays.length > 0 && (
+              <optgroup label="Past Sundays (Archived History)" className="bg-neutral-900 text-amber-400 font-bold">
+                {pastSundays.map((sun) => (
+                  <option key={sun.date} value={sun.date} className="bg-neutral-900 text-neutral-400 font-normal">
+                    {sun.label} (Archived)
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
             {/* If user selected a custom date not in SEASON_SUNDAYS */}
             {!SEASON_SUNDAYS.some((s) => s.date === selectedDate) && (
-              <option value={selectedDate} className="bg-neutral-900 text-white">
-                {selectedDate} (Custom Date)
-              </option>
+              <optgroup label="Custom Dates" className="bg-neutral-900 text-neutral-300 font-bold">
+                <option value={selectedDate} className="bg-neutral-900 text-white font-normal">
+                  {selectedDate} (Custom Date)
+                </option>
+              </optgroup>
             )}
           </select>
 
@@ -157,6 +178,17 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
         </div>
+
+        {/* Ambient Archive View Badge */}
+        {isPastArchivedDate && (
+          <span
+            className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-400 text-[11px] font-medium"
+            title="Viewing historical session data. Past sessions remain permanently archived."
+          >
+            <Archive className="w-3 h-3 text-amber-400" />
+            Archive View
+          </span>
+        )}
       </div>
 
       {/* Right Slot: Offline Status + WhatsApp Quick Copy + Notification Bell */}

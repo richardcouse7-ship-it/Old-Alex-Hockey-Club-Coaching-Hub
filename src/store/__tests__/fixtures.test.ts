@@ -92,4 +92,84 @@ describe('Match Fixtures Domain Actions', () => {
     expect(updated?.pushbackTime).toBe('12:00');
     expect(updated?.umpires).toEqual(['Official Umpire 1', 'Official Umpire 2']);
   });
+
+  describe('importLeinsterSeasonFixtures', () => {
+    const importedFixtures: MatchFixture[] = [
+      {
+        id: 'fix-imp-1',
+        date: '2026-10-11',
+        pushbackTime: '10:30',
+        ageGroupOrTeam: 'Inter A',
+        rankedTeam: 'Inter A',
+        trainingGroup: 'Inters',
+        competition: 'Leinster Inter League Div 1',
+        opposition: 'YMCA HC',
+        isHome: true,
+        venue: 'Milltown Pitch 1 (Full)',
+        leadCoachOrManager: 'Richard Couse',
+        umpires: ['Club Appointed'],
+        status: 'Scheduled',
+      },
+      {
+        id: 'fix-imp-2',
+        date: '2026-10-11',
+        pushbackTime: '12:00',
+        ageGroupOrTeam: 'Inter B',
+        rankedTeam: 'Inter B',
+        trainingGroup: 'Inters',
+        competition: 'Leinster Inter League Div 2',
+        opposition: 'Pembroke Wanderers',
+        isHome: false,
+        venue: 'Serpentine Ave',
+        leadCoachOrManager: 'Richard Couse',
+        umpires: ['Club Appointed'],
+        status: 'Scheduled',
+      },
+      {
+        id: 'fix-imp-3',
+        date: '2026-09-13',
+        pushbackTime: '10:00',
+        ageGroupOrTeam: 'Inters',
+        rankedTeam: 'Inter A',
+        trainingGroup: 'Inters',
+        competition: 'Leinster League',
+        opposition: 'Railway Union HC',
+        isHome: true,
+        venue: 'Milltown Pitch 1 (Full)',
+        leadCoachOrManager: 'Richard Couse',
+        umpires: ['Sarah Byrne'],
+        status: 'Scheduled',
+        notes: 'Updated via Leinster import',
+      },
+    ];
+
+    it('completely replaces fixtures when mode is replace', () => {
+      const result = useAppStore.getState().importLeinsterSeasonFixtures(importedFixtures, 'replace');
+
+      expect(result.importedCount).toBe(3);
+      expect(result.updatedCount).toBe(0);
+      expect(result.totalCount).toBe(3);
+
+      const current = useAppStore.getState().fixtures;
+      expect(current).toHaveLength(3);
+      expect(current.map((f) => f.id)).toEqual(['fix-imp-1', 'fix-imp-2', 'fix-imp-3']);
+    });
+
+    it('merges and deduplicates fixtures when mode is merge', () => {
+      // Existing contains fixture1 (2026-09-13 Inters vs Railway Union HC)
+      // importedFixtures contains a match on same date & team & opposition
+      const result = useAppStore.getState().importLeinsterSeasonFixtures(importedFixtures, 'merge');
+
+      // 2 new fixtures added, 1 existing updated
+      expect(result.importedCount).toBe(2);
+      expect(result.updatedCount).toBe(1);
+      expect(result.totalCount).toBe(4);
+
+      const current = useAppStore.getState().fixtures;
+      // Original id preserved on merged fixture
+      const merged = current.find((f) => f.id === 'fix-test-1');
+      expect(merged).toBeDefined();
+      expect(merged?.notes).toBe('Updated via Leinster import');
+    });
+  });
 });

@@ -2,6 +2,8 @@ import { AppSliceCreator, CoachesSlice } from '../types';
 import { persistenceAdapter } from '../persistence/LocalStoragePersistenceAdapter';
 import { StorageService } from '../../services/storageService';
 import { Coach, CoachAvailability } from '../../types';
+import { COACHES } from '../../data/initialData';
+import { syncWithMasterRoster } from '../persistence/migration';
 
 export const createCoachesSlice: AppSliceCreator<CoachesSlice> = (set, get) => ({
   coaches: [],
@@ -115,5 +117,18 @@ export const createCoachesSlice: AppSliceCreator<CoachesSlice> = (set, get) => (
       persistenceAdapter.saveKey('slots', nextSlots);
     }
     return assignedCount;
+  },
+
+  syncMasterRoster: () => {
+    const currentCoaches = get().coaches;
+    const merged = syncWithMasterRoster(currentCoaches, COACHES);
+    const addedCount = merged.length - currentCoaches.length;
+
+    if (addedCount > 0) {
+      set({ coaches: merged });
+      persistenceAdapter.saveKey('coaches', merged);
+    }
+
+    return { total: merged.length, addedCount };
   },
 });

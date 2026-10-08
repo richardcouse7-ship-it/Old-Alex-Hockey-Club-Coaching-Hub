@@ -188,6 +188,9 @@ export interface MatchFixture {
   awayScore?: number;
   goalscorers?: string;
   status: 'Scheduled' | 'In Progress' | 'Completed' | 'Postponed';
+  trainingGroup?: AgeGroup;
+  rankedTeam?: string;
+  round?: string;
 }
 
 export type WhatsAppTemplateType =

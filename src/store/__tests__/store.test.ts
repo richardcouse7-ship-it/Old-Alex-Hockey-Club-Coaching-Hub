@@ -91,8 +91,10 @@ describe('Store Initialization and Hydration', () => {
     localStorage.setItem(STORAGE_KEYS.COACHES, JSON.stringify(testCoaches));
 
     const data = loadValidatedDomainData();
-    expect(data.coaches.length).toBe(1);
+    // Non-destructive sync merges missing master coaches while strictly preserving existing persisted coaches
+    expect(data.coaches.length).toBe(1 + COACHES.length);
     expect(data.coaches[0].id).toBe('test-coach-only');
+    expect(data.coaches.some((c) => c.name === 'Single Coach')).toBe(true);
     // Missing keys fall back to valid initial defaults
     expect(data.slots.length).toBe(INITIAL_SESSION_SLOTS.length);
     expect(data.fixtures.length).toBeGreaterThan(0);

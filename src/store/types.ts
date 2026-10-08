@@ -82,6 +82,7 @@ export interface CoachesSlice {
   ) => void;
   importAvailabilityFromForm: (rawText: string, targetDate: string) => void;
   autoAssignCoachesToDate: (date: string) => number;
+  syncMasterRoster: () => { total: number; addedCount: number };
 }
 
 // ==========================================
@@ -113,6 +114,10 @@ export interface FixturesSlice {
     awayScore: number,
     scorers?: string
   ) => void;
+  importLeinsterSeasonFixtures: (
+    fixtures: MatchFixture[],
+    mode: 'replace' | 'merge'
+  ) => { importedCount: number; updatedCount: number; totalCount: number };
 }
 
 // ==========================================

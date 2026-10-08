@@ -46,6 +46,7 @@ export const STORAGE_KEYS = {
   BLITZ_TOURNAMENTS: 'oldalex_blitz_tournaments_v2',
   SUN_MODE: 'oldalex_sun_mode_v1',
   SIDEBAR_COLLAPSED: 'oldalex_sidebar_collapsed_v1',
+  SELECTED_DATE: 'oldalex_selected_date_v2',
 } as const;
 
 /**
@@ -76,12 +77,43 @@ export function safeSetStorage<T>(key: string, value: T): void {
 }
 
 /**
+ * Non-destructive merge helper to sync existing coaches with master roster.
+ * Preserves existing coach modifications, assigned slots, and availability records.
+ */
+export function syncWithMasterRoster(existingCoaches: Coach[], masterCoaches: Coach[]): Coach[] {
+  // Normalize coach name for duplicate detection, including known aliases
+  const normalizeKey = (name: string): string => {
+    const trimmed = name.trim().toLowerCase();
+    if (trimmed === 'daisy dillon mansfield' || trimmed === 'daisy dillon malone') {
+      return 'daisy dillon';
+    }
+    return trimmed;
+  };
+
+  const existingMap = new Map(existingCoaches.map((c) => [normalizeKey(c.name), c]));
+  const merged = [...existingCoaches];
+
+  for (const master of masterCoaches) {
+    const key = normalizeKey(master.name);
+    if (!existingMap.has(key)) {
+      merged.push(master);
+      existingMap.set(key, master);
+    }
+  }
+  return merged;
+}
+
+
+/**
  * Defensive migration and fallback validator for initial store load.
  * Guarantees existing user data wins while ensuring malformed payloads never crash startup.
  */
 export function loadValidatedDomainData() {
   const slots = safeGetStorage<SessionSlot[]>(STORAGE_KEYS.SLOTS, INITIAL_SESSION_SLOTS);
-  const coaches = safeGetStorage<Coach[]>(STORAGE_KEYS.COACHES, COACHES);
+  const storedCoaches = safeGetStorage<Coach[]>(STORAGE_KEYS.COACHES, COACHES);
+  const coaches = Array.isArray(storedCoaches)
+    ? syncWithMasterRoster(storedCoaches, COACHES)
+    : COACHES;
   
   // Drills: Merge any newly shipped club curriculum drills while preserving existing modifications
   const storedDrills = safeGetStorage<Drill[]>(STORAGE_KEYS.DRILLS, DRILLS);

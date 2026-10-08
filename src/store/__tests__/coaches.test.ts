@@ -122,4 +122,35 @@ describe('Coach Roster and Availability Domain Actions', () => {
     expect(remainingAvail.length).toBe(1);
     expect(remainingAvail[0].coachId).toBe('coach-test-2');
   });
+
+  it('syncs with master roster non-destructively and handles aliases', () => {
+    // Modify coach1 custom properties
+    const customCoach1: Coach = {
+      ...coach1,
+      role: 'Head of Youth Hockey',
+      phone: '0879991111',
+    };
+    useAppStore.getState().setCoaches([customCoach1]);
+
+    const result = useAppStore.getState().syncMasterRoster();
+    const finalCoaches = useAppStore.getState().coaches;
+
+    // Preserves the existing coach customization
+    const syncedCoach1 = finalCoaches.find((c) => c.name.toLowerCase() === coach1.name.toLowerCase());
+    expect(syncedCoach1).toBeDefined();
+    expect(syncedCoach1?.role).toBe('Head of Youth Hockey');
+    expect(syncedCoach1?.phone).toBe('0879991111');
+
+    // Added all other master coaches
+    expect(result.addedCount).toBeGreaterThan(0);
+    expect(result.total).toBe(finalCoaches.length);
+    expect(finalCoaches.some((c) => c.name === 'Nicola Wildish')).toBe(true);
+    expect(finalCoaches.some((c) => c.name === 'Richard Couse')).toBe(true);
+
+    // Running sync again reports 0 added
+    const secondSync = useAppStore.getState().syncMasterRoster();
+    expect(secondSync.addedCount).toBe(0);
+    expect(secondSync.total).toBe(finalCoaches.length);
+  });
 });
+
