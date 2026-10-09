@@ -85,7 +85,7 @@ describe('Drills Domain Store & Leinster Curriculum Alignment', () => {
     expect(useAppStore.getState().drills).toHaveLength(0);
   });
 
-  it('contains all 8 official Leinster curriculum drills in EXTENDED_DRILLS seed dataset', () => {
+  it('contains all 22 official Leinster curriculum drills (drill-46 through drill-67) in EXTENDED_DRILLS seed dataset', () => {
     const leinsterDrillIds = [
       'drill-46',
       'drill-47',
@@ -95,6 +95,20 @@ describe('Drills Domain Store & Leinster Curriculum Alignment', () => {
       'drill-51',
       'drill-52',
       'drill-53',
+      'drill-54',
+      'drill-55',
+      'drill-56',
+      'drill-57',
+      'drill-58',
+      'drill-59',
+      'drill-60',
+      'drill-61',
+      'drill-62',
+      'drill-63',
+      'drill-64',
+      'drill-65',
+      'drill-66',
+      'drill-67',
     ];
 
     for (const id of leinsterDrillIds) {
@@ -103,6 +117,18 @@ describe('Drills Domain Store & Leinster Curriculum Alignment', () => {
       expect(drill?.competencyCategory).toBeTruthy();
       expect(drill?.leinsterLevel).toBeTruthy();
       expect(drill?.competencyCheckpoints?.length).toBeGreaterThanOrEqual(3);
+      expect(drill?.diagramElements?.length).toBeGreaterThan(0);
+      expect(drill?.coachingPoints?.length).toBeGreaterThanOrEqual(4);
     }
+  });
+
+  it('guarantees balanced pathway coverage across Foundation, Development, and Youth Performance', () => {
+    const foundation = EXTENDED_DRILLS.filter((d) => d.pathway === 'Foundation');
+    const development = EXTENDED_DRILLS.filter((d) => d.pathway === 'Development');
+    const youthPerf = EXTENDED_DRILLS.filter((d) => d.pathway === 'Youth Performance');
+
+    expect(foundation.length).toBeGreaterThanOrEqual(6);
+    expect(development.length).toBeGreaterThanOrEqual(10);
+    expect(youthPerf.length).toBeGreaterThanOrEqual(12);
   });
 });
