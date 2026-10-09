@@ -58,6 +58,9 @@ export interface Drill {
   diagramElements?: DrillDiagramElement[];
   diagramDescription?: string;
   animationFrames?: DrillAnimationFrame[];
+  competencyCategory?: string;
+  competencyCheckpoints?: string[];
+  leinsterLevel?: 'Foundation (U8-U10)' | 'Development (U12-U14)' | 'Youth Performance (U16-Inters)';
 }
 
 export interface DrillAnimationFrame {

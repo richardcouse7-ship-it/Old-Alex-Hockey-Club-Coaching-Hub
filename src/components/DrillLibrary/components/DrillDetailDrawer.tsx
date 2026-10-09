@@ -46,6 +46,22 @@ export const DrillDetailDrawer: React.FC<DrillDetailDrawerProps> = ({
             <p className="text-xs text-red-400 font-mono-data mt-0.5 font-bold">
               Skill Focus: {drill.skill} · Duration: {drill.durationMinutes} mins
             </p>
+
+            {/* Leinster Syllabus Badges */}
+            {(drill.competencyCategory || drill.leinsterLevel) && (
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {drill.competencyCategory && (
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-red-950 text-red-300 border border-red-800">
+                    🏅 {drill.competencyCategory}
+                  </span>
+                )}
+                {drill.leinsterLevel && (
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-neutral-900 text-sky-300 border border-sky-900/60">
+                    {drill.leinsterLevel}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <button
             type="button"
@@ -116,6 +132,23 @@ export const DrillDetailDrawer: React.FC<DrillDetailDrawerProps> = ({
             ))}
           </ul>
         </div>
+
+        {/* Leinster Mastery Checkpoints */}
+        {drill.competencyCheckpoints && drill.competencyCheckpoints.length > 0 && (
+          <div className="p-3.5 bg-emerald-950/30 border border-emerald-900/50 rounded-2xl space-y-2">
+            <h4 className="text-xs font-bold uppercase text-emerald-300 tracking-wider flex items-center gap-1.5">
+              <span>✓ Leinster Age-Grade Mastery Checkpoints</span>
+            </h4>
+            <ul className="space-y-1.5">
+              {drill.competencyCheckpoints.map((cp, i) => (
+                <li key={i} className="text-xs text-neutral-200 flex items-start gap-2">
+                  <span className="text-emerald-400 font-bold">✓</span>
+                  <span>{cp}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Equipment list */}
         <div>

@@ -57,7 +57,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
       if (selectedSkillFilter !== 'ALL') {
         const skillObj = LEINSTER_CURRICULUM_SKILLS.find((s) => s.id === selectedSkillFilter);
         if (skillObj && skillObj.keywords.length > 0) {
-          const textToSearch = `${drill.title} ${drill.skill} ${drill.setup} ${drill.instructions} ${drill.coachingPoints.join(' ')}`.toLowerCase();
+          const textToSearch = `${drill.title} ${drill.skill} ${drill.competencyCategory || ''} ${drill.leinsterLevel || ''} ${drill.setup} ${drill.instructions} ${drill.coachingPoints.join(' ')}`.toLowerCase();
           const matches = skillObj.keywords.some((kw) => textToSearch.includes(kw.toLowerCase()));
           if (!matches) return false;
         }
@@ -66,7 +66,7 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
       // 5. Search Query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const searchable = `${drill.title} ${drill.skill} ${drill.setup} ${drill.instructions} ${drill.coachingPoints.join(' ')} ${drill.targetAgeGroups?.join(' ') || ''}`.toLowerCase();
+        const searchable = `${drill.title} ${drill.skill} ${drill.competencyCategory || ''} ${drill.leinsterLevel || ''} ${drill.setup} ${drill.instructions} ${drill.coachingPoints.join(' ')} ${drill.targetAgeGroups?.join(' ') || ''}`.toLowerCase();
         return searchable.includes(q);
       }
       return true;

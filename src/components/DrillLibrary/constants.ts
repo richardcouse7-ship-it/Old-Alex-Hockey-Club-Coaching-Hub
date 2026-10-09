@@ -37,7 +37,13 @@ export const LEINSTER_CURRICULUM_SKILLS: LeinsterSkillFilter[] = [
     id: 'set_pieces',
     label: 'Penalty Corners & Set Pieces',
     badge: 'PC Tactics',
-    keywords: ['penalty corner', 'pc', 'routine', 'injection', 'set piece', 'trapping'],
+    keywords: ['penalty corner', 'pc', 'routine', 'injection', 'set piece', 'trapping', 'battery'],
+  },
+  {
+    id: 'pressing',
+    label: 'Pressing & Team Structure',
+    badge: 'Pressing',
+    keywords: ['press', 'pressing', 'channel', 'turnover', '3-3', 'zonal', 'structure', 'lock'],
   },
   {
     id: 'goalkeeping',
@@ -52,6 +58,23 @@ export const LEINSTER_CURRICULUM_SKILLS: LeinsterSkillFilter[] = [
     keywords: ['game', 'blitz', 'match', 'tournament', 'super 7s', 'small-sided', 'conditioned'],
   },
 ];
+
+export const LEINSTER_COMPETENCY_OPTIONS = [
+  'Elimination & 3D Skills',
+  'Passing & First Touch',
+  '1v1 Tackling & Channeling',
+  '2v1 & Circle Overloads',
+  'Penalty Corners & Set Pieces',
+  'Pressing & Team Structure',
+  'Goalkeeping & Deflections',
+  'Small-Sided Games & Match Play',
+] as const;
+
+export const LEINSTER_LEVEL_OPTIONS = [
+  'Foundation (U8-U10)',
+  'Development (U12-U14)',
+  'Youth Performance (U16-Inters)',
+] as const;
 
 export interface PitchStarterPreset {
   name: string;

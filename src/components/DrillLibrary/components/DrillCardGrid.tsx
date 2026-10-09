@@ -77,6 +77,22 @@ export const DrillCardGrid: React.FC<DrillCardGridProps> = ({
             </h3>
             <p className="text-xs text-red-400 font-semibold mt-0.5">{drill.skill}</p>
 
+            {/* Leinster Syllabus Badges */}
+            {(drill.competencyCategory || drill.leinsterLevel) && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {drill.competencyCategory && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-950/80 text-red-300 border border-red-800/80">
+                    🏅 {drill.competencyCategory}
+                  </span>
+                )}
+                {drill.leinsterLevel && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-neutral-900 text-sky-300 border border-sky-900/60">
+                    {drill.leinsterLevel}
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Pitch Diagram */}
             {drill.diagramElements && (
               <div className="mt-3 relative group/diag">
@@ -118,6 +134,14 @@ export const DrillCardGrid: React.FC<DrillCardGridProps> = ({
             <p className="text-xs text-neutral-300 mt-3 line-clamp-2 leading-relaxed">
               {drill.setup}
             </p>
+
+            {/* Mastery Checkpoint Preview */}
+            {drill.competencyCheckpoints && drill.competencyCheckpoints.length > 0 && (
+              <div className="mt-2.5 text-[11px] text-emerald-300 bg-emerald-950/30 border border-emerald-900/40 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5">
+                <span className="text-emerald-400 font-bold shrink-0">✓ Checkpoint:</span>
+                <span className="truncate text-neutral-300">{drill.competencyCheckpoints[0]}</span>
+              </div>
+            )}
           </div>
 
           {/* Card footer */}

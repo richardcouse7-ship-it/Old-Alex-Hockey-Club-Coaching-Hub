@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, PenTool, Check } from 'lucide-react';
 import { Drill, DrillDiagramElement, Pathway } from '../../../types';
-import { PITCH_STARTER_PRESETS } from '../constants';
+import {
+  PITCH_STARTER_PRESETS,
+  LEINSTER_COMPETENCY_OPTIONS,
+  LEINSTER_LEVEL_OPTIONS,
+} from '../constants';
 import { TacticalDiagram } from '../../TacticalBoard/TacticalDiagram';
 import { TacticalWhiteboard } from '../../TacticalBoard/TacticalWhiteboard';
 
@@ -28,6 +32,9 @@ export const DrillEditorModal: React.FC<DrillEditorModalProps> = ({
   const [newInstructions, setNewInstructions] = useState('');
   const [newPoints, setNewPoints] = useState('');
   const [newEquipment, setNewEquipment] = useState('Balls, Cones, Bibs');
+  const [newCompetency, setNewCompetency] = useState<string>('');
+  const [newLevel, setNewLevel] = useState<string>('');
+  const [newCheckpoints, setNewCheckpoints] = useState<string>('');
   const [customNewElements, setCustomNewElements] = useState<DrillDiagramElement[]>(
     PITCH_STARTER_PRESETS[0].elements
   );
@@ -43,6 +50,9 @@ export const DrillEditorModal: React.FC<DrillEditorModalProps> = ({
       setNewInstructions(drillToEdit.instructions);
       setNewPoints(drillToEdit.coachingPoints.join('\n'));
       setNewEquipment(drillToEdit.equipment?.join(', ') || 'Balls, Cones, Bibs');
+      setNewCompetency(drillToEdit.competencyCategory || '');
+      setNewLevel(drillToEdit.leinsterLevel || '');
+      setNewCheckpoints(drillToEdit.competencyCheckpoints?.join('\n') || '');
       setCustomNewElements(drillToEdit.diagramElements || PITCH_STARTER_PRESETS[0].elements);
     } else {
       setNewTitle('');
@@ -53,6 +63,9 @@ export const DrillEditorModal: React.FC<DrillEditorModalProps> = ({
       setNewInstructions('');
       setNewPoints('');
       setNewEquipment('Balls, Cones, Bibs');
+      setNewCompetency('');
+      setNewLevel('');
+      setNewCheckpoints('');
       setCustomNewElements(presetElements || PITCH_STARTER_PRESETS[0].elements);
     }
   }, [drillToEdit, presetElements, isOpen]);
@@ -78,6 +91,11 @@ export const DrillEditorModal: React.FC<DrillEditorModalProps> = ({
       .map((item) => item.trim())
       .filter(Boolean);
 
+    const parsedCheckpoints = newCheckpoints
+      .split('\n')
+      .map((c) => c.trim())
+      .filter(Boolean);
+
     if (drillToEdit) {
       const updated: Drill = {
         ...drillToEdit,
@@ -92,6 +110,9 @@ export const DrillEditorModal: React.FC<DrillEditorModalProps> = ({
           : drillToEdit.coachingPoints,
         equipment: parsedEquipment.length > 0 ? parsedEquipment : drillToEdit.equipment,
         diagramElements: customNewElements.length > 0 ? customNewElements : drillToEdit.diagramElements,
+        competencyCategory: newCompetency || undefined,
+        leinsterLevel: (newLevel as any) || undefined,
+        competencyCheckpoints: parsedCheckpoints.length > 0 ? parsedCheckpoints : undefined,
       };
       onSave(updated);
     } else {
@@ -111,6 +132,9 @@ export const DrillEditorModal: React.FC<DrillEditorModalProps> = ({
           : ['Two hands on stick', 'Head up to scan open space', 'Call for the ball early'],
         equipment: parsedEquipment.length > 0 ? parsedEquipment : ['Balls', 'Cones', 'Bibs'],
         diagramElements: customNewElements.length > 0 ? customNewElements : fallbackDiagram,
+        competencyCategory: newCompetency || undefined,
+        leinsterLevel: (newLevel as any) || undefined,
+        competencyCheckpoints: parsedCheckpoints.length > 0 ? parsedCheckpoints : undefined,
       };
       onSave(created);
     }
@@ -261,6 +285,67 @@ export const DrillEditorModal: React.FC<DrillEditorModalProps> = ({
               placeholder="E.g. 3D Elimination, 2v1 Overload, Penalty Corner"
               className="w-full bg-neutral-900 border border-neutral-750 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-red-500"
             />
+          </div>
+
+          {/* Leinster Hockey Curriculum Alignment */}
+          <div className="p-3.5 bg-neutral-950 border border-neutral-800 rounded-2xl space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white">Leinster Syllabus Competency & Mastery</span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-800/80 font-mono-data font-bold">
+                Leinster Alignment
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 mb-1">
+                  Competency Category
+                </label>
+                <select
+                  value={newCompetency}
+                  onChange={(e) => setNewCompetency(e.target.value)}
+                  className="w-full bg-neutral-900 border border-neutral-750 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-red-500"
+                >
+                  <option value="">None / Custom</option>
+                  {LEINSTER_COMPETENCY_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 mb-1">
+                  Leinster Age-Grade Level
+                </label>
+                <select
+                  value={newLevel}
+                  onChange={(e) => setNewLevel(e.target.value)}
+                  className="w-full bg-neutral-900 border border-neutral-750 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-red-500"
+                >
+                  <option value="">Select Level</option>
+                  {LEINSTER_LEVEL_OPTIONS.map((lvl) => (
+                    <option key={lvl} value={lvl}>
+                      {lvl}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-neutral-300 mb-1">
+                Age-Grade Mastery Checkpoints (one per line)
+              </label>
+              <textarea
+                rows={2}
+                value={newCheckpoints}
+                onChange={(e) => setNewCheckpoints(e.target.value)}
+                placeholder="E.g. Clean trap inside 0.5s&#10;Channels ball carrier onto reverse stick&#10;Forces 3 turnovers within 5 minutes"
+                className="w-full bg-neutral-900 border border-neutral-750 rounded-xl p-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-red-500"
+              />
+            </div>
           </div>
 
           <div>
