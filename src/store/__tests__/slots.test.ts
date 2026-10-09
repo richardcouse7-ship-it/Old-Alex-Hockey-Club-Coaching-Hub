@@ -140,4 +140,54 @@ describe('Timetable Slots Domain Actions', () => {
     // Ensure slot data wasn't modified
     expect(useAppStore.getState().slots).toEqual(slotsBefore);
   });
+
+  it('generates off-site away slots in Sunday timetable from match fixtures', () => {
+    // Seed fixtures with 1 away fixture and 1 home fixture
+    useAppStore.getState().setFixtures([
+      {
+        id: 'fix-away-1',
+        date: '2026-10-18',
+        pushbackTime: '11:15',
+        ageGroupOrTeam: 'Inter A',
+        competition: 'Leinster Inter League Div 1',
+        opposition: 'YMCA Inter 1',
+        isHome: false,
+        venue: 'Wesley College (YMCA HC)',
+        leadCoachOrManager: 'Josh Gill',
+        umpires: ['Club Appointed'],
+        status: 'Scheduled',
+        trainingGroup: 'Inters',
+        rankedTeam: 'Inter A',
+      },
+      {
+        id: 'fix-home-1',
+        date: '2026-10-18',
+        pushbackTime: '13:00',
+        ageGroupOrTeam: 'Inter B',
+        competition: 'Leinster Inter League Div 2',
+        opposition: 'Pembroke Wanderers Inter 3',
+        isHome: true,
+        venue: 'Milltown Pitch 1 (Full)',
+        leadCoachOrManager: 'Ben McInerney',
+        umpires: ['Club Appointed'],
+        status: 'Scheduled',
+        trainingGroup: 'Inters',
+        rankedTeam: 'Inter B',
+      },
+    ]);
+
+    const result = useAppStore.getState().generateAwaySlotsFromFixtures({ targetDate: '2026-10-18' });
+
+    expect(result.createdCount).toBe(1);
+    const allSlots = useAppStore.getState().slots;
+    const awaySlot = allSlots.find((s) => s.fixtureId === 'fix-away-1');
+    expect(awaySlot).toBeDefined();
+    expect(awaySlot?.isAway).toBe(true);
+    expect(awaySlot?.pitchSectorId).toBe('away');
+    expect(awaySlot?.date).toBe('2026-10-18');
+    expect(awaySlot?.startTime).toBe('11:15');
+    expect(awaySlot?.meetTime).toBe('10:30');
+    expect(awaySlot?.venueName).toBe('Wesley College (YMCA HC)');
+    expect(awaySlot?.opposition).toBe('YMCA Inter 1');
+  });
 });

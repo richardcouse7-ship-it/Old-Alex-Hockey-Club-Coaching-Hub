@@ -21,7 +21,9 @@ import {
   Link,
   ClipboardPaste,
   Loader2,
+  Navigation,
 } from 'lucide-react';
+import { useAppStore } from '../../store';
 import { AgeGroup, MatchFixture } from '../../types';
 import {
   parseLeinsterFixturesCSV,
@@ -83,6 +85,7 @@ export const LeinsterFixturesImportModal: React.FC<LeinsterFixturesImportModalPr
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [autoProjectAway, setAutoProjectAway] = useState<boolean>(true);
 
   // Editable overrides per row index: { [rowIndex]: Partial<LeinsterParsedRow> }
   const [rowOverrides, setRowOverrides] = useState<
@@ -345,6 +348,9 @@ export const LeinsterFixturesImportModal: React.FC<LeinsterFixturesImportModalPr
     if (googleSheetUrl.trim()) GoogleSheetSyncService.setLinkedSheetUrl(googleSheetUrl.trim());
     if (selectedTabGid) GoogleSheetSyncService.setLinkedTabGid(selectedTabGid);
     onImport(fixturesToImport, importMode);
+    if (autoProjectAway) {
+      useAppStore.getState().generateAwaySlotsFromFixtures();
+    }
     onClose();
   };
 
@@ -734,6 +740,28 @@ Example columns: Date, Time, Team (Inter A - E), Opponent, Venue, Home/Away`}
                 </div>
               </div>
 
+              {/* Sunday Timetable Integration Toggle */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-indigo-950/30 border border-indigo-900/60 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <Navigation className="w-4 h-4 text-indigo-400" />
+                  <div>
+                    <span className="text-xs font-bold text-white block">Sunday Timetable Integration</span>
+                    <span className="text-[11px] text-indigo-300/80">
+                      Generate off-site away match sessions with meet times & venue Google Maps links
+                    </span>
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-xs text-indigo-200 cursor-pointer shrink-0 font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={autoProjectAway}
+                    onChange={(e) => setAutoProjectAway(e.target.checked)}
+                    className="rounded text-indigo-600 focus:ring-indigo-500 bg-neutral-800"
+                  />
+                  <span>Project away matches into timetable</span>
+                </label>
+              </div>
+
               {/* Filter Strip & Ranked Teams Bar */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-neutral-400">
@@ -948,6 +976,9 @@ Example columns: Date, Time, Team (Inter A - E), Opponent, Venue, Home/Away`}
                       importMode
                     );
                     onImport(summary.fixtures, importMode);
+                    if (autoProjectAway) {
+                      useAppStore.getState().generateAwaySlotsFromFixtures();
+                    }
                     onClose();
                   } catch (err: unknown) {
                     const msg = err instanceof Error ? err.message : String(err);

@@ -1,7 +1,7 @@
 import { AppSliceCreator, SlotsSlice } from '../types';
 import { persistenceAdapter } from '../persistence/LocalStoragePersistenceAdapter';
 import { SessionSlot, SundayMasterTemplate } from '../../types';
-import { normalizeAwaySlot } from '../../utils/awayFixtureUtils';
+import { normalizeAwaySlot, syncAwayFixturesToSlots } from '../../utils/awayFixtureUtils';
 import { addMinutesToTime } from '../../services/storageService';
 
 export const createSlotsSlice: AppSliceCreator<SlotsSlice> = (set, get) => ({
@@ -124,5 +124,33 @@ export const createSlotsSlice: AppSliceCreator<SlotsSlice> = (set, get) => ({
     const next = get().customSundayTemplates.filter((t) => t.id !== templateId);
     set({ customSundayTemplates: next });
     persistenceAdapter.saveKey('customSundayTemplates', next);
+  },
+
+  generateAwaySlotsFromFixtures: (options?: {
+    targetDate?: string;
+    fixtureIds?: string[];
+  }) => {
+    const currentSlots = get().slots;
+    const fixtures = get().fixtures;
+    const coaches = get().coaches;
+
+    const { updatedSlots, createdCount, updatedCount, skippedCount } = syncAwayFixturesToSlots(
+      currentSlots,
+      fixtures,
+      coaches,
+      options
+    );
+
+    set({ slots: updatedSlots });
+    persistenceAdapter.saveKey('slots', updatedSlots);
+
+    const totalAwaySlots = updatedSlots.filter((s) => s.isAway || s.pitchSectorId === 'away').length;
+
+    return {
+      createdCount,
+      updatedCount,
+      skippedCount,
+      totalAwaySlots,
+    };
   },
 });

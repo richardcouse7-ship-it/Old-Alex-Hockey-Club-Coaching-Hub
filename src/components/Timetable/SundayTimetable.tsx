@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, ShieldAlert, Sparkles, Copy, Plus } from 'lucide-react';
+import { Calendar, ShieldAlert, Sparkles, Copy, Plus, Navigation } from 'lucide-react';
 import {
   Coach,
   CoachAvailability,
@@ -165,6 +165,25 @@ export const SundayTimetable: React.FC<SundayTimetableProps> = ({
     month: 'short',
   });
 
+  const awayFixturesForDate = fixtures.filter(
+    (f) => f.date === selectedDate && (!f.isHome || f.pitchSectorId === 'away')
+  );
+  const unprojectedAwayFixtures = awayFixturesForDate.filter(
+    (fix) =>
+      !awaySlotsForDate.some(
+        (slot) =>
+          slot.fixtureId === fix.id ||
+          (slot.opposition &&
+            fix.opposition &&
+            slot.opposition.toLowerCase().trim() === fix.opposition.toLowerCase().trim())
+      )
+  );
+
+  const handleProjectTodayAwayFixtures = () => {
+    const res = useAppStore.getState().generateAwaySlotsFromFixtures({ targetDate: selectedDate });
+    showToast(`Projected ${res.createdCount} away match session(s) into today's timetable!`);
+  };
+
   return (
     <div className="space-y-4">
       {/* 1. UNIFIED COMMAND STRIP */}
@@ -220,6 +239,31 @@ export const SundayTimetable: React.FC<SundayTimetableProps> = ({
               {conflicts.map((c) => c.description).join(' ')}
             </p>
           </div>
+        </div>
+      )}
+
+      {/* UNPROJECTED AWAY FIXTURES ALERT BANNER */}
+      {unprojectedAwayFixtures.length > 0 && (
+        <div className="bg-indigo-950/40 border border-indigo-800/80 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+          <div className="flex items-start gap-3">
+            <Navigation className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <h4 className="font-bold text-indigo-200">
+                {unprojectedAwayFixtures.length} Leinster Away Match{unprojectedAwayFixtures.length > 1 ? 'es' : ''} Scheduled on {formattedDate}
+              </h4>
+              <p className="text-indigo-300/80 mt-0.5">
+                {unprojectedAwayFixtures.map((f) => `${f.rankedTeam || f.ageGroupOrTeam} @ ${f.venue}`).join(' · ')}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleProjectTodayAwayFixtures}
+            className="px-3.5 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer shrink-0"
+          >
+            <Navigation className="w-3.5 h-3.5 text-indigo-200" />
+            <span>Project into Timetable</span>
+          </button>
         </div>
       )}
 

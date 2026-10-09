@@ -60,6 +60,15 @@ export interface SlotsSlice {
   setSlots: (slots: SessionSlot[]) => void;
   saveCustomTemplate: (template: SundayMasterTemplate) => void;
   deleteCustomTemplate: (templateId: string) => void;
+  generateAwaySlotsFromFixtures: (options?: {
+    targetDate?: string;
+    fixtureIds?: string[];
+  }) => {
+    createdCount: number;
+    updatedCount: number;
+    skippedCount: number;
+    totalAwaySlots: number;
+  };
 }
 
 // ==========================================
