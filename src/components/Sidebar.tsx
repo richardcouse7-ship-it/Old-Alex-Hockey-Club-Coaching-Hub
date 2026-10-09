@@ -48,6 +48,7 @@ interface SidebarProps {
   onOpenEmergencyModal?: () => void;
   onOpenGoogleModal?: () => void;
   onOpenImportModal?: () => void;
+  onOpenFixturesImportModal?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   isSunMode?: boolean;
@@ -83,6 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenEmergencyModal,
   onOpenGoogleModal,
   onOpenImportModal,
+  onOpenFixturesImportModal,
   isCollapsed = false,
   onToggleCollapse,
   isSunMode = false,
@@ -342,6 +344,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               )}
 
+              {onOpenFixturesImportModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenFixturesImportModal();
+                    onCloseMobile();
+                  }}
+                  className={`w-full flex items-center rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-500 border border-red-500 transition-all active:scale-95 min-h-[44px] shadow-md cursor-pointer ${
+                    isCollapsed ? 'justify-center p-2' : 'justify-between px-3.5 py-2.5'
+                  }`}
+                  title="Import Leinster League match fixtures from Google Sheets"
+                  aria-label="Import Match Fixtures"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Trophy className="w-4 h-4 text-white shrink-0" />
+                    {!isCollapsed && <span>Import Fixtures</span>}
+                  </div>
+                  {!isCollapsed && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-red-100 font-mono font-bold">
+                      Leinster
+                    </span>
+                  )}
+                </button>
+              )}
+
               {onOpenEmergencyModal && (
                 <button
                   type="button"
@@ -407,12 +434,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className={`w-full flex items-center rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-neutral-900 border border-neutral-800/60 transition-all active:scale-95 cursor-pointer min-h-[44px] ${
                     isCollapsed ? 'justify-center p-2' : 'justify-between px-3.5 py-2'
                   }`}
-                  title="Google Drive Vault & Gmail Integration"
-                  aria-label="Google Drive & Gmail"
+                  title="Google Workspace (Drive Vault, Gmail & Google Sheets)"
+                  aria-label="Google Workspace & Sheets"
                 >
                   <div className="flex items-center gap-2.5">
                     <Cloud className="w-4 h-4 text-sky-400 shrink-0" />
-                    {!isCollapsed && <span>Google Drive & Gmail</span>}
+                    {!isCollapsed && <span>Google Workspace & Sheets</span>}
                   </div>
                   {!isCollapsed && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800/60 font-mono">

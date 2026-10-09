@@ -41,6 +41,7 @@ export interface SundayTimetableProps {
   onOpenCalendarManager?: () => void;
   onUpdateAllSlots?: (slots: SessionSlot[]) => void;
   onOpenImportModal?: () => void;
+  onOpenFixturesImportModal?: () => void;
   showToast?: (msg: string) => void;
 }
 
@@ -52,6 +53,7 @@ export const SundayTimetable: React.FC<SundayTimetableProps> = ({
   selectedDate,
   drills,
   availability,
+  fixtures = [],
   onSelectSlot,
   onUpdateSlotCoach,
   onCopyWhatsApp,
@@ -61,6 +63,7 @@ export const SundayTimetable: React.FC<SundayTimetableProps> = ({
   onOpenCalendarManager,
   onUpdateAllSlots,
   onOpenImportModal,
+  onOpenFixturesImportModal,
   showToast = () => {},
 }) => {
   const [selectedPathway, setSelectedPathway] = useState<Pathway | 'ALL'>('ALL');
@@ -177,6 +180,7 @@ export const SundayTimetable: React.FC<SundayTimetableProps> = ({
         onToggleViewMode={setViewMode}
         onShiftTimings={handleShiftTimings}
         onOpenImportModal={onOpenImportModal}
+        onOpenFixturesImportModal={onOpenFixturesImportModal}
         onCopyWhatsApp={onCopyWhatsApp}
         copiedWhatsApp={copiedWhatsApp}
         onAddNewSlot={() => onAddCustomSlot()}

@@ -47,6 +47,8 @@ export const STORAGE_KEYS = {
   SUN_MODE: 'oldalex_sun_mode_v1',
   SIDEBAR_COLLAPSED: 'oldalex_sidebar_collapsed_v1',
   SELECTED_DATE: 'oldalex_selected_date_v2',
+  LINKED_GOOGLE_SHEET: 'oldalex_linked_fixtures_sheet_url_v1',
+  LAST_GOOGLE_SHEET_SYNC: 'oldalex_linked_fixtures_sheet_sync_v1',
 } as const;
 
 /**

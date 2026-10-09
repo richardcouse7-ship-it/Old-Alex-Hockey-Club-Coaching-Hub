@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   X,
   FileSpreadsheet,
@@ -18,13 +18,24 @@ import {
   Layers,
   ChevronDown,
   Info,
+  Link,
+  ClipboardPaste,
+  Loader2,
 } from 'lucide-react';
 import { AgeGroup, MatchFixture } from '../../types';
 import {
   parseLeinsterFixturesCSV,
   SAMPLE_LEINSTER_SEASON_CSV,
   LeinsterParsedRow,
+  fetchGoogleSheetContent,
+  GoogleSheetTab,
 } from '../../utils/leinsterFixturesParser';
+import {
+  GoogleSheetSyncService,
+  DEFAULT_INTER_SHEET_URL,
+  DEFAULT_INTER_GID,
+  PRIMARY_OLD_ALEX_TABS,
+} from '../../services/googleSheetSyncService';
 
 interface LeinsterFixturesImportModalProps {
   isOpen: boolean;
@@ -54,6 +65,18 @@ export const LeinsterFixturesImportModal: React.FC<LeinsterFixturesImportModalPr
   onImport,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<'sheet_link' | 'paste' | 'file'>('sheet_link');
+  const [googleSheetUrl, setGoogleSheetUrl] = useState<string>(() => {
+    return GoogleSheetSyncService.getLinkedSheetUrl() || DEFAULT_INTER_SHEET_URL;
+  });
+  const [discoveredTabs, setDiscoveredTabs] = useState<GoogleSheetTab[]>(() => PRIMARY_OLD_ALEX_TABS);
+  const [selectedTabGid, setSelectedTabGid] = useState<string>(() => {
+    return GoogleSheetSyncService.getLinkedTabGid() || DEFAULT_INTER_GID;
+  });
+  const [pastedRawText, setPastedRawText] = useState<string>('');
+  const [isFetchingSheet, setIsFetchingSheet] = useState<boolean>(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const [fileContent, setFileContent] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
@@ -128,6 +151,73 @@ export const LeinsterFixturesImportModal: React.FC<LeinsterFixturesImportModalPr
 
   const handleLoadSample = () => {
     handleLoadContent(SAMPLE_LEINSTER_SEASON_CSV, 'leinster_season_fixtures_sample.csv');
+  };
+
+  const handleFetchSheet = async () => {
+    if (!googleSheetUrl.trim()) {
+      setFetchError('Please enter a Google Sheets URL or spreadsheet ID.');
+      return;
+    }
+    setFetchError(null);
+    setIsFetchingSheet(true);
+    try {
+      GoogleSheetSyncService.setLinkedSheetUrl(googleSheetUrl);
+      const result = await fetchGoogleSheetContent(googleSheetUrl, selectedTabGid);
+      if (result.discoveredTabs.length > 0) {
+        setDiscoveredTabs(result.discoveredTabs);
+      }
+      if (result.sheetName) {
+        const found = result.discoveredTabs.find((t) => t.name === result.sheetName);
+        if (found) {
+          setSelectedTabGid(found.gid);
+          GoogleSheetSyncService.setLinkedTabGid(found.gid);
+        }
+      }
+      handleLoadContent(
+        result.csvText,
+        result.sheetName ? `Google Sheet (${result.sheetName})` : 'Google Sheet'
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setFetchError(msg);
+    } finally {
+      setIsFetchingSheet(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && !fileContent && activeTab === 'sheet_link') {
+      handleFetchSheet();
+    }
+  }, [isOpen]);
+
+  const handleSelectTab = async (gid: string) => {
+    setSelectedTabGid(gid);
+    GoogleSheetSyncService.setLinkedTabGid(gid);
+    setFetchError(null);
+    setIsFetchingSheet(true);
+    try {
+      const result = await fetchGoogleSheetContent(googleSheetUrl, gid);
+      const tab = discoveredTabs.find((t) => t.gid === gid);
+      handleLoadContent(
+        result.csvText,
+        tab ? `Google Sheet (${tab.name})` : `Google Sheet (${result.sheetName || 'Tab'})`
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setFetchError(msg);
+    } finally {
+      setIsFetchingSheet(false);
+    }
+  };
+
+  const handleApplyPastedText = () => {
+    if (!pastedRawText.trim()) {
+      setFetchError('Please paste your Google Sheets rows into the box above.');
+      return;
+    }
+    setFetchError(null);
+    handleLoadContent(pastedRawText, 'Pasted Google Sheets Data');
   };
 
   // Row override handlers
@@ -251,6 +341,9 @@ export const LeinsterFixturesImportModal: React.FC<LeinsterFixturesImportModalPr
         round: r.round,
       }));
 
+    GoogleSheetSyncService.setLastSyncTimestamp(new Date().toISOString());
+    if (googleSheetUrl.trim()) GoogleSheetSyncService.setLinkedSheetUrl(googleSheetUrl.trim());
+    if (selectedTabGid) GoogleSheetSyncService.setLinkedTabGid(selectedTabGid);
     onImport(fixturesToImport, importMode);
     onClose();
   };
@@ -269,13 +362,13 @@ export const LeinsterFixturesImportModal: React.FC<LeinsterFixturesImportModalPr
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-mono-data text-red-500 font-bold uppercase tracking-wider">
-                  Leinster Hockey Association
+                  Leinster Hockey & Google Sheets
                 </span>
                 <span className="text-neutral-600">·</span>
-                <span className="text-xs text-neutral-400">Annual Season Importer</span>
+                <span className="text-xs text-neutral-400">Fixtures Importer</span>
               </div>
               <h2 className="text-xl font-bold text-white tracking-tight">
-                Import Year's Fixtures from Leinster Hockey
+                Import Season Fixtures (Google Sheets / CSV)
               </h2>
             </div>
           </div>
@@ -290,61 +383,276 @@ export const LeinsterFixturesImportModal: React.FC<LeinsterFixturesImportModalPr
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {/* File Upload / Dropzone */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
-              isDragging
-                ? 'border-red-500 bg-red-950/20'
-                : 'border-neutral-750 hover:border-neutral-600 bg-black/30'
-            }`}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.tsv,.txt"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <div className="flex flex-col items-center justify-center gap-3">
-              <div className="p-3 bg-neutral-800 rounded-full text-red-400">
-                <Upload className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  {fileName ? (
-                    <span className="text-emerald-400 flex items-center justify-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4" /> Loaded: {fileName}
-                    </span>
-                  ) : (
-                    'Select or drag & drop Leinster Hockey CSV/Excel spreadsheet'
+          {/* Tab Selector & Import Container */}
+          <div className="bg-black/30 border border-neutral-750 rounded-2xl overflow-hidden shadow-lg">
+            {/* Tabs Header */}
+            <div className="flex items-center border-b border-neutral-800 bg-neutral-900/60 p-1.5 gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('sheet_link');
+                  setFetchError(null);
+                }}
+                className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                  activeTab === 'sheet_link'
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
+                }`}
+              >
+                <Link className="w-4 h-4" />
+                <span>Google Sheets Link</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('paste');
+                  setFetchError(null);
+                }}
+                className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                  activeTab === 'paste'
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
+                }`}
+              >
+                <ClipboardPaste className="w-4 h-4" />
+                <span>Paste from Sheet (Ctrl+V)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('file');
+                  setFetchError(null);
+                }}
+                className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                  activeTab === 'file'
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
+                }`}
+              >
+                <Upload className="w-4 h-4" />
+                <span>Upload CSV / File</span>
+              </button>
+            </div>
+
+            {/* Tab Body */}
+            <div className="p-5">
+              {activeTab === 'sheet_link' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                      Google Sheets Share URL or Spreadsheet ID
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="relative flex-1">
+                        <Link className="absolute left-3.5 top-3 w-4 h-4 text-neutral-500" />
+                        <input
+                          type="text"
+                          value={googleSheetUrl}
+                          onChange={(e) => {
+                            setGoogleSheetUrl(e.target.value);
+                            setFetchError(null);
+                          }}
+                          placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=0"
+                          className="w-full pl-10 pr-4 py-2.5 bg-neutral-950 border border-neutral-750 focus:border-red-500 rounded-xl text-xs text-white placeholder-neutral-500 outline-none transition-colors"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleFetchSheet}
+                        disabled={isFetchingSheet}
+                        className="px-5 py-2.5 bg-red-600 hover:bg-red-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-2 whitespace-nowrap shadow-sm"
+                      >
+                        {isFetchingSheet ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin text-white" />
+                            <span>Fetching...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Link className="w-4 h-4" />
+                            <span>Fetch Fixtures</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {discoveredTabs.length > 0 && (
+                    <div className="p-3 bg-neutral-900 border border-neutral-750 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="text-neutral-200 font-semibold">Sheet Tab to Import:</span>
+                      </div>
+                      <select
+                        value={selectedTabGid}
+                        onChange={(e) => handleSelectTab(e.target.value)}
+                        disabled={isFetchingSheet}
+                        className="bg-neutral-950 border border-neutral-700 text-white rounded-lg px-3 py-1.5 text-xs outline-none focus:border-red-500 font-medium cursor-pointer"
+                      >
+                        {discoveredTabs.map((t) => (
+                          <option key={t.gid} value={t.gid}>
+                            {t.name} {t.name.toLowerCase() === 'old alex' ? '★ (All 5 Inter Teams Consolidated)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   )}
-                </p>
-                <p className="text-xs text-neutral-400 mt-1 max-w-xl mx-auto">
-                  Upload the schedule exported or copied from the Leinster Hockey website (GameDay).
-                  Supports multi-ranked squads per training group (e.g. Inters A–E, Minors A–C, 1st Years A–D, 6th Class A–C).
-                </p>
-              </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 bg-neutral-800 hover:bg-neutral-750 text-white rounded-xl text-xs font-bold border border-neutral-700 flex items-center gap-1.5 transition-all"
+                  <div className="p-3 bg-neutral-900/60 border border-neutral-800 rounded-xl flex items-start gap-2.5 text-xs text-neutral-400">
+                    <Info className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p>
+                        <strong className="text-neutral-200">Tip:</strong> In Google Sheets, make sure general access is set to{' '}
+                        <strong className="text-white">"Anyone with the link can view"</strong> (File → Share).
+                      </p>
+                      <p className="mt-0.5 text-neutral-500">
+                        If your sheet is strictly private or login-restricted, simply switch to the{' '}
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('paste')}
+                          className="text-red-400 underline hover:text-red-300"
+                        >
+                          Paste from Sheet
+                        </button>{' '}
+                        tab to paste the rows directly without changing share permissions!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'paste' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                      Copy & Paste Rows Directly from Google Sheets or Excel
+                    </label>
+                    <textarea
+                      rows={6}
+                      value={pastedRawText}
+                      onChange={(e) => {
+                        setPastedRawText(e.target.value);
+                        setFetchError(null);
+                      }}
+                      placeholder={`1. Open your Google Sheet
+2. Highlight the fixture rows (or press Ctrl+A)
+3. Press Ctrl+C to copy
+4. Paste (Ctrl+V) right here...
+
+Example columns: Date, Time, Team (Inter A - E), Opponent, Venue, Home/Away`}
+                      className="w-full p-3 bg-neutral-950 border border-neutral-750 focus:border-red-500 rounded-xl text-xs font-mono text-white placeholder-neutral-500 outline-none transition-colors"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={handleApplyPastedText}
+                      className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-2 shadow-sm"
+                    >
+                      <ClipboardPaste className="w-4 h-4" />
+                      <span>Parse Pasted Fixtures</span>
+                    </button>
+                    {pastedRawText.trim() && (
+                      <span className="text-xs text-neutral-400 font-mono">
+                        {pastedRawText.split('\n').filter((l) => l.trim()).length} lines detected
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'file' && (
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
+                    isDragging
+                      ? 'border-red-500 bg-red-950/20'
+                      : 'border-neutral-750 hover:border-neutral-600 bg-black/20'
+                  }`}
                 >
-                  <FileSpreadsheet className="w-4 h-4 text-red-500" />
-                  <span>Choose CSV / TSV File</span>
-                </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv,.tsv,.txt"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <div className="flex flex-col items-center justify-center gap-2.5">
+                    <div className="p-3 bg-neutral-800 rounded-full text-red-400">
+                      <Upload className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">
+                        Drop downloaded Google Sheets CSV / TSV file here
+                      </p>
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        In Google Sheets: File → Download → Comma Separated Values (.csv)
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="mt-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-750 text-white rounded-xl text-xs font-bold border border-neutral-700 flex items-center gap-1.5 transition-all"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 text-red-500" />
+                      <span>Browse File</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
+              {/* Status / Errors */}
+              {fetchError && (
+                <div className="mt-3 p-3 bg-red-950/40 border border-red-800/60 rounded-xl flex items-start gap-2 text-xs text-red-300">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block font-semibold">Import Note:</strong>
+                    <span>{fetchError}</span>
+                  </div>
+                </div>
+              )}
+
+              {fileName && parseResult.validCount > 0 && (
+                <div className="mt-3 p-3 bg-emerald-950/30 border border-emerald-800/40 rounded-xl flex items-center justify-between text-xs text-emerald-300">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>
+                      Successfully loaded <strong>{fileName}</strong>: Found{' '}
+                      <strong>{parseResult.validCount} valid fixtures</strong>.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFileContent('');
+                      setFileName('');
+                      setGoogleSheetUrl('');
+                      setPastedRawText('');
+                    }}
+                    className="text-neutral-400 hover:text-white underline text-[11px]"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+
+              {/* Sample loader footer */}
+              <div className="flex items-center justify-between pt-3 mt-3 border-t border-neutral-800/80 text-xs">
+                <span className="text-neutral-500 text-[11px]">
+                  Supports multi-ranked squads (Inter A–E, Minor A–C, 1st Year A–D, 6th Class A–C)
+                </span>
                 <button
                   type="button"
                   onClick={handleLoadSample}
-                  className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-300 rounded-xl text-xs font-bold border border-red-500/30 flex items-center gap-1.5 transition-all"
+                  className="px-3 py-1.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 rounded-lg text-[11px] font-semibold border border-red-500/20 flex items-center gap-1.5 transition-all"
                 >
-                  <Sparkles className="w-4 h-4 text-red-400" />
-                  <span>Load 2026/27 Leinster Sample (30 Matches)</span>
+                  <Sparkles className="w-3.5 h-3.5 text-red-400" />
+                  <span>Load Sample Season CSV (30 Matches)</span>
                 </button>
               </div>
             </div>
@@ -621,20 +929,47 @@ export const LeinsterFixturesImportModal: React.FC<LeinsterFixturesImportModalPr
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-xl transition-colors"
+              className="px-4 py-2 text-xs font-semibold text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
+            {activeTab === 'sheet_link' && (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    setIsFetchingSheet(true);
+                    const summary = await GoogleSheetSyncService.syncAllOldAlexTabs(
+                      googleSheetUrl,
+                      importMode
+                    );
+                    onImport(summary.fixtures, importMode);
+                    onClose();
+                  } catch (err: unknown) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    setFetchError(msg);
+                  } finally {
+                    setIsFetchingSheet(false);
+                  }
+                }}
+                disabled={isFetchingSheet}
+                className="px-4 py-2 text-xs font-bold bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+                title="Sync all 4 official Old Alex squads (Inters, Minors, 1st Years, 6th Class)"
+              >
+                <Sparkles className="w-4 h-4 text-sky-200" />
+                <span>Import All Squads (119 Fixtures)</span>
+              </button>
+            )}
             <button
               type="button"
-              disabled={selectedCount === 0}
+              disabled={selectedCount === 0 || isFetchingSheet}
               onClick={handleConfirmImport}
-              className={`px-5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition-all shadow-lg ${
-                selectedCount > 0
+              className={`px-5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition-all shadow-lg cursor-pointer ${
+                selectedCount > 0 && !isFetchingSheet
                   ? 'bg-red-600 hover:bg-red-500 text-white active:scale-95'
                   : 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
               }`}

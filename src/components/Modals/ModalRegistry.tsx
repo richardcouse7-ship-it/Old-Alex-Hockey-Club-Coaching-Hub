@@ -74,6 +74,9 @@ const GoogleIntegrationModal = lazy(() =>
 const ScheduleImportModal = lazy(() =>
   import('../Timetable/ScheduleImportModal').then((m) => ({ default: m.ScheduleImportModal }))
 );
+const LeinsterFixturesImportModal = lazy(() =>
+  import('../Fixtures/LeinsterFixturesImportModal').then((m) => ({ default: m.LeinsterFixturesImportModal }))
+);
 
 export function ModalRegistry() {
   const slots = useAppStore((s) => s.slots);
@@ -457,6 +460,23 @@ export function ModalRegistry() {
             sectors={sectors}
             initialText={(modalPayload?.initialText as string) || ''}
             onApplySchedule={handleApplyScheduleImport}
+            onSwitchToFixturesImport={() => openModal('fixtures_import')}
+          />
+        )}
+
+        {/* Leinster Hockey Match Fixtures Importer Modal */}
+        {activeModal === 'fixtures_import' && (
+          <LeinsterFixturesImportModal
+            isOpen={true}
+            onClose={closeModal}
+            onImport={(imported, mode) => {
+              const res = useAppStore.getState().importLeinsterSeasonFixtures(imported, mode);
+              setFixtures(useAppStore.getState().fixtures);
+              showToast(
+                `Successfully imported ${res.importedCount} fixtures (${res.updatedCount} updated, total ${res.totalCount})!`
+              );
+              return res;
+            }}
           />
         )}
       </Suspense>

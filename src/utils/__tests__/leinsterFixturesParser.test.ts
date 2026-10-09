@@ -7,6 +7,7 @@ import {
   resolveLeinsterVenue,
   parseLeinsterFixturesCSV,
   SAMPLE_LEINSTER_SEASON_CSV,
+  extractGoogleSheetCsvUrl,
 } from '../leinsterFixturesParser';
 
 describe('Leinster Hockey Fixtures Parser & Multi-Ranked Team Resolver', () => {
@@ -166,6 +167,72 @@ Away,Minor A,v Bray (Div 1),Temple Carrig,4:00pm,,11/10/2026`;
       expect(result.fixtures[0].pushbackTime).toBe('11:00');
       expect(result.fixtures[3].ageGroupOrTeam).toBe('Minor A');
       expect(result.fixtures[3].opposition).toBe('Bray');
+    });
+
+    it('parses Google Sheets copy for the 5 Inter teams (Inter A through Inter E)', () => {
+      const intersSheetData = `Date\tTeam\tOpponent\tVenue\tTime\tCoach\tUmpire\tHome/Away
+11/10/2026\tInter A\tYMCA\tMilltown Pitch 1\t13:30\tRichard Couse\tClub Appointed\tHome
+11/10/2026\tInter B\tPembroke\tSerpentine Ave\t10:15\tNicola Wildish\tClub Appointed\tAway
+18/10/2026\tInter C\tClontarf\tMount Temple\t13:45\tKatie Mullan\tRef Provided\tAway
+18/10/2026\tInter D\tBoyne\tDrogheda Grammar\t10:30\tMatt Salisbury\tRef Provided\tAway
+25/10/2026\tInter E\tRailway Union\tMilltown Pitch 1\t15:00\tRichard Couse\tClub Appointed\tHome`;
+
+      const result = parseLeinsterFixturesCSV(intersSheetData);
+      expect(result.validCount).toBe(5);
+      expect(result.trainingGroupBreakdown['Inters']).toBe(5);
+      expect(result.rankedTeamBreakdown['Inter A']).toBe(1);
+      expect(result.rankedTeamBreakdown['Inter B']).toBe(1);
+      expect(result.rankedTeamBreakdown['Inter C']).toBe(1);
+      expect(result.rankedTeamBreakdown['Inter D']).toBe(1);
+      expect(result.rankedTeamBreakdown['Inter E']).toBe(1);
+
+      // Verify specific properties
+      expect(result.fixtures[0].ageGroupOrTeam).toBe('Inter A');
+      expect(result.fixtures[0].opposition).toBe('YMCA');
+      expect(result.fixtures[0].isHome).toBe(true);
+      expect(result.fixtures[0].leadCoachOrManager).toBe('Richard Couse');
+
+      expect(result.fixtures[4].ageGroupOrTeam).toBe('Inter E');
+      expect(result.fixtures[4].opposition).toBe('Railway Union');
+      expect(result.fixtures[4].isHome).toBe(true);
+      expect(result.fixtures[4].pushbackTime).toBe('15:00');
+    });
+
+    it('correctly scans past banner rows and stops at Total Games summary', () => {
+      const bannerCsv = `"","Old Alex Hockey Club - Inter Leagues 2026/2027 Fixtures Official consolidated fixtures schedule for all 5 Old Alex teams"
+"","45","5","22","23","5","Oct 2026 – Mar 2027"
+"","Date","Team","Round","Home Team","Away Team","Venue","Opponent"
+"","04/10/2026","Old Alex Inter 1","Round 1","YMCA Inter 1","Old Alex Inter 1","Away","YMCA Inter 1"
+"","04/10/2026","Old Alex Inter 2","Round 1","Old Alex Inter 2","Pembroke Wanderers Inter 3","Home","Pembroke Wanderers Inter 3"
+"","Total Games","45 Fixtures Across 5 Teams"
+"","Ignored duplicate rows below"`;
+
+      const result = parseLeinsterFixturesCSV(bannerCsv);
+      expect(result.validCount).toBe(2);
+      expect(result.errorCount).toBe(0);
+      expect(result.fixtures[0].rankedTeam).toBe('Inter A');
+      expect(result.fixtures[0].isHome).toBe(false);
+      expect(result.fixtures[0].opposition).toBe('YMCA Inter 1');
+      expect(result.fixtures[0].venue).toContain('Wesley College');
+
+      expect(result.fixtures[1].rankedTeam).toBe('Inter B');
+      expect(result.fixtures[1].isHome).toBe(true);
+      expect(result.fixtures[1].venue).toContain('Milltown Pitch 1');
+    });
+  });
+
+  describe('extractGoogleSheetCsvUrl', () => {
+    it('converts standard edit Google Sheets URLs into CSV export URLs', () => {
+      const url = 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=0';
+      const csvUrl = extractGoogleSheetCsvUrl(url);
+      expect(csvUrl).toContain('https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/gviz/tq?tqx=out:csv');
+      expect(csvUrl).toContain('&gid=0');
+    });
+
+    it('converts share URLs without gid', () => {
+      const url = 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit?usp=sharing';
+      const csvUrl = extractGoogleSheetCsvUrl(url);
+      expect(csvUrl).toBe('https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/gviz/tq?tqx=out:csv');
     });
   });
 });

@@ -207,6 +207,7 @@ export default function App() {
         onOpenEmergencyModal={() => handleOpenEmergencyModal()}
         onOpenGoogleModal={() => openModal('google_sync')}
         onOpenImportModal={() => openModal('schedule_import')}
+        onOpenFixturesImportModal={() => openModal('fixtures_import')}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={toggleSidebarCollapse}
         isSunMode={isSunMode}
@@ -237,6 +238,7 @@ export default function App() {
           onOpenCalendarManager={() => openModal('calendar_manager')}
           onOpenEmergencyModal={() => handleOpenEmergencyModal()}
           onOpenGoogleModal={() => openModal('google_sync')}
+          onOpenFixturesImportModal={() => openModal('fixtures_import')}
           isSunMode={isSunMode}
           onToggleSunMode={toggleSunMode}
           isSidebarCollapsed={isSidebarCollapsed}
@@ -295,6 +297,7 @@ export default function App() {
                   onOpenImportModal={(initialText) =>
                     openModal('schedule_import', initialText ? { initialText } : undefined)
                   }
+                  onOpenFixturesImportModal={() => openModal('fixtures_import')}
                   isOnline={isOnline && !isSimulatingOffline}
                 />
               )}
@@ -319,6 +322,7 @@ export default function App() {
                   onOpenCalendarManager={() => openModal('calendar_manager')}
                   onUpdateAllSlots={setSlots}
                   onOpenImportModal={() => openModal('schedule_import')}
+                  onOpenFixturesImportModal={() => openModal('fixtures_import')}
                   showToast={showToast}
                 />
               )}

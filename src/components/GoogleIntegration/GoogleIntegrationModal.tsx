@@ -16,12 +16,14 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronUp,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   GoogleIntegrationService,
   AUTHORIZED_DIRECTOR_EMAIL,
   DRIVE_FOLDER_NAME,
 } from '../../services/googleIntegrationService';
+import { GoogleSheetSyncService } from '../../services/googleSheetSyncService';
 import { useAppStore } from '../../store';
 import { GoogleAuthStatus, GoogleDriveBackupFile, HubBackupData } from '../../types';
 
@@ -52,7 +54,32 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
   const [lastBackupSuccess, setLastBackupSuccess] = useState<string | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [isClientIdMissing, setIsClientIdMissing] = useState(false);
+  const [isSyncingSheet, setIsSyncingSheet] = useState(false);
+  const [sheetUrlInput, setSheetUrlInput] = useState<string>(() =>
+    GoogleSheetSyncService.getLinkedSheetUrl()
+  );
+  const [lastSheetSyncSuccess, setLastSheetSyncSuccess] = useState<string | null>(() =>
+    GoogleSheetSyncService.getLastSyncTimestamp()
+  );
   const clientIdInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSyncGoogleSheetFixtures = async () => {
+    setIsSyncingSheet(true);
+    try {
+      if (sheetUrlInput.trim()) {
+        GoogleSheetSyncService.setLinkedSheetUrl(sheetUrlInput.trim());
+      }
+      const summary = await GoogleSheetSyncService.syncToStore(sheetUrlInput);
+      setLastSheetSyncSuccess(summary.timestamp);
+      showToast(
+        `Synced ${summary.importedCount + summary.updatedCount} Inter fixtures from Google Sheets! (Inter A–E)`
+      );
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Google Sheet sync failed.');
+    } finally {
+      setIsSyncingSheet(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -333,8 +360,81 @@ export const GoogleIntegrationModal: React.FC<GoogleIntegrationModalProps> = ({
             )}
           </div>
 
-          {/* Quick Dual Features: Drive Backups + Gmail Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Quick Features: Sheets Sync + Drive Backups + Gmail Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Google Sheets Fixtures Sync Card */}
+            <div className="p-5 bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-white font-bold">
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                    <span>Google Sheets Fixtures</span>
+                  </div>
+                  <span className="text-[10px] bg-emerald-950 border border-emerald-800 text-emerald-300 px-2 py-0.5 rounded font-mono font-bold">
+                    45 Inter Matches
+                  </span>
+                </div>
+                <p className="text-neutral-400 leading-relaxed">
+                  Consolidated season fixtures for the 5 Inter teams (Inter 1, 2, 4, 7, 8). Syncs Leinster match dates, venues, and pushbacks.
+                </p>
+                <div className="space-y-1.5 pt-1">
+                  <div className="text-[10px] text-neutral-400 font-semibold flex items-center justify-between">
+                    <span>Linked Sheet URL:</span>
+                    <button
+                      type="button"
+                      onClick={() => setSheetUrlInput(GoogleSheetSyncService.getLinkedSheetUrl())}
+                      className="text-emerald-400 hover:text-emerald-300 underline cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={sheetUrlInput}
+                    onChange={(e) => setSheetUrlInput(e.target.value)}
+                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                    className="w-full px-2.5 py-1.5 bg-neutral-900 border border-neutral-750 focus:border-emerald-500 rounded-lg font-mono text-[11px] text-white outline-none"
+                  />
+                </div>
+                {lastSheetSyncSuccess && (
+                  <p className="text-emerald-400 font-mono text-[11px] flex items-center gap-1.5 bg-emerald-950/40 p-2 rounded-lg border border-emerald-800/40">
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    Synced: {new Date(lastSheetSyncSuccess).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-neutral-850">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSyncGoogleSheetFixtures}
+                    disabled={isSyncingSheet}
+                    className="flex-1 py-2.5 px-3 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
+                  >
+                    {isSyncingSheet ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                    <span>{isSyncingSheet ? 'Syncing...' : 'Sync Fixtures Now'}</span>
+                  </button>
+                  <a
+                    href={sheetUrlInput || GoogleSheetSyncService.getLinkedSheetUrl()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-850 text-neutral-300 hover:text-white border border-neutral-800 transition-all flex items-center justify-center cursor-pointer"
+                    title="Open sheet in Google Sheets"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+                <p className="text-[10px] text-neutral-500 text-center">
+                  Live cloud sync without leaving the Coaching Hub.
+                </p>
+              </div>
+            </div>
+
             {/* Google Drive Vault Card */}
             <div className="p-5 bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col justify-between space-y-4">
               <div className="space-y-2">

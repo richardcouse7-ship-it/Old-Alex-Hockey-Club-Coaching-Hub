@@ -18,12 +18,20 @@ import {
   FileSpreadsheet,
   Layers,
   Sparkles,
+  RefreshCw,
+  Link,
+  Settings,
 } from 'lucide-react';
 import { AgeGroup, MatchFixture, PitchSector, SessionSlot } from '../../types';
 import { ExportService } from '../../services/exportService';
 import { QuickScoreModal } from './QuickScoreModal';
 import { LeinsterFixturesImportModal } from './LeinsterFixturesImportModal';
 import { useAppStore } from '../../store';
+import {
+  GoogleSheetSyncService,
+  DEFAULT_INTER_SHEET_URL,
+  DEFAULT_INTER_TAB_NAME,
+} from '../../services/googleSheetSyncService';
 
 interface FixturesViewProps {
   fixtures: MatchFixture[];
@@ -51,6 +59,50 @@ export const FixturesView: React.FC<FixturesViewProps> = ({
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedFixtureForScore, setSelectedFixtureForScore] = useState<MatchFixture | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [isSyncingSheet, setIsSyncingSheet] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(() =>
+    GoogleSheetSyncService.getLastSyncTimestamp()
+  );
+
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+
+  const handleSyncGoogleSheet = async () => {
+    setIsSyncingSheet(true);
+    try {
+      const summary = await GoogleSheetSyncService.syncToStore();
+      onUpdateFixtures(useAppStore.getState().fixtures);
+      setLastSyncTime(summary.timestamp);
+      setToastMsg(
+        `Successfully synced ${summary.importedCount + summary.updatedCount} Inter fixtures from Google Sheets! (Inter A–E)`
+      );
+      setTimeout(() => setToastMsg(null), 4500);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setToastMsg(`Google Sheets sync error: ${msg}`);
+      setTimeout(() => setToastMsg(null), 5000);
+    } finally {
+      setIsSyncingSheet(false);
+    }
+  };
+
+  const handleSyncAllSquads = async () => {
+    setIsSyncingAll(true);
+    try {
+      const summary = await GoogleSheetSyncService.syncAllOldAlexTabs();
+      onUpdateFixtures(useAppStore.getState().fixtures);
+      setLastSyncTime(summary.timestamp);
+      setToastMsg(
+        `Successfully synced ${summary.importedCount + summary.updatedCount} fixtures across ALL Old Alex squads (Inters, Minors, 1st Years, 6th Class)!`
+      );
+      setTimeout(() => setToastMsg(null), 5000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setToastMsg(`Google Sheets sync error: ${msg}`);
+      setTimeout(() => setToastMsg(null), 5000);
+    } finally {
+      setIsSyncingAll(false);
+    }
+  };
 
   // Discover distinct Training Groups and Ranked Teams from fixtures
   const availableTrainingGroups = useMemo(() => {
@@ -230,22 +282,122 @@ export const FixturesView: React.FC<FixturesViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleSyncGoogleSheet}
+            disabled={isSyncingSheet || isSyncingAll}
+            className="px-3.5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+            title="1-Click Sync all 45 Inter matches from the linked Google Sheet"
+          >
+            {isSyncingSheet ? (
+              <RefreshCw className="w-4 h-4 animate-spin text-white" />
+            ) : (
+              <RefreshCw className="w-4 h-4 text-emerald-200" />
+            )}
+            <span>{isSyncingSheet ? 'Syncing Inters...' : 'Sync Inters (45)'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSyncAllSquads}
+            disabled={isSyncingAll || isSyncingSheet}
+            className="px-3.5 py-2 text-xs font-bold bg-sky-600 hover:bg-sky-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+            title="Sync all 4 Old Alex squads: Inters, Minors, 1st Years, and 6th Class (~119 matches)"
+          >
+            {isSyncingAll ? (
+              <RefreshCw className="w-4 h-4 animate-spin text-white" />
+            ) : (
+              <Sparkles className="w-4 h-4 text-sky-200" />
+            )}
+            <span>{isSyncingAll ? 'Syncing All...' : 'Sync All Squads (119)'}</span>
+          </button>
           <button
             type="button"
             onClick={() => setShowImportModal(true)}
-            className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-md border border-neutral-750 active:scale-95"
+            className="px-3.5 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-md border border-neutral-750 active:scale-95 cursor-pointer"
+            title="Link Google Sheet, select tabs, or upload CSV"
           >
-            <FileSpreadsheet className="w-4 h-4 text-red-500" />
-            <span>Import Leinster Fixtures (CSV)</span>
+            <Link className="w-4 h-4 text-sky-400" />
+            <span>Link / Import Sheets</span>
           </button>
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95"
+            className="px-3.5 py-2 text-xs font-semibold bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add League Fixture</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Linked Google Sheet Status & 1-Click Sync Card */}
+      <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-950/80 border border-emerald-700/60 flex items-center justify-center text-emerald-400 shrink-0">
+            <FileSpreadsheet className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold text-white text-xs">Linked Google Sheet:</span>
+              <span className="text-[10px] font-mono-data bg-emerald-950 text-emerald-300 border border-emerald-800/80 px-2 py-0.5 rounded-full font-bold">
+                Old Alex Leinster Fixtures
+              </span>
+              <span className="text-[10px] font-mono-data bg-neutral-900 text-neutral-300 border border-neutral-750 px-2 py-0.5 rounded-full font-medium">
+                4 Squads: Inters (45) · Minors (25) · 1st Yrs (40) · 6th Class (9)
+              </span>
+            </div>
+            <p className="text-[11px] text-neutral-400 mt-1 flex flex-wrap items-center gap-2">
+              <span>Primary Tab: <strong>{DEFAULT_INTER_TAB_NAME} (Inters A–E)</strong></span>
+              <span>·</span>
+              <span className="text-neutral-300">
+                {lastSyncTime
+                  ? `Last synced: ${new Date(lastSyncTime).toLocaleDateString()} at ${new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                  : 'Ready to sync official season fixtures'}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleSyncGoogleSheet}
+            disabled={isSyncingSheet || isSyncingAll}
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-lg flex items-center gap-1.5 transition-all active:scale-95 shadow-sm cursor-pointer"
+            title="Sync Inters (45 matches)"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSheet ? 'animate-spin' : ''}`} />
+            <span>{isSyncingSheet ? 'Syncing...' : 'Sync Inters'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSyncAllSquads}
+            disabled={isSyncingAll || isSyncingSheet}
+            className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold rounded-lg flex items-center gap-1.5 transition-all active:scale-95 shadow-sm cursor-pointer"
+            title="Sync all squads: Inters, Minors, 1st Years, 6th Class (~119 matches)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-sky-200" />
+            <span>{isSyncingAll ? 'Syncing...' : 'Sync All (119)'}</span>
+          </button>
+          <a
+            href={GoogleSheetSyncService.getLinkedSheetUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-750 font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Open Google Sheet directly in a new browser tab"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-neutral-400" />
+            <span>Open Sheet</span>
+          </a>
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-750 font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Inspect rows, choose tabs, or re-link sheet URL"
+          >
+            <Settings className="w-3.5 h-3.5 text-neutral-400" />
+            <span>Options</span>
           </button>
         </div>
       </div>

@@ -13,6 +13,7 @@ import {
   Zap,
   CloudRain,
   Navigation,
+  Trophy,
 } from 'lucide-react';
 import { Pathway } from '../../../types';
 
@@ -28,6 +29,7 @@ export interface TimetableFilterBarProps {
   onToggleViewMode: (mode: 'matrix' | 'timeline') => void;
   onShiftTimings: (deltaMinutes: number) => void;
   onOpenImportModal?: () => void;
+  onOpenFixturesImportModal?: () => void;
   onCopyWhatsApp: () => void;
   copiedWhatsApp: boolean;
   onAddNewSlot: () => void;
@@ -50,6 +52,7 @@ export const TimetableFilterBar: React.FC<TimetableFilterBarProps> = ({
   onToggleViewMode,
   onShiftTimings,
   onOpenImportModal,
+  onOpenFixturesImportModal,
   onCopyWhatsApp,
   copiedWhatsApp,
   onAddNewSlot,
@@ -187,11 +190,24 @@ export const TimetableFilterBar: React.FC<TimetableFilterBarProps> = ({
           <button
             type="button"
             onClick={onOpenImportModal}
-            className="min-h-[40px] px-3 py-1.5 text-xs font-semibold bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-emerald-500/70 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
-            title="Import schedule from Google Sheets or Excel"
+            className="min-h-[40px] px-3 py-1.5 text-xs font-semibold bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-emerald-500/70 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+            title="Import weekly training schedule from Google Sheets or Excel"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Import</span>
+            <span>Import Schedule</span>
+          </button>
+        )}
+
+        {/* Import Match Fixtures Button */}
+        {onOpenFixturesImportModal && (
+          <button
+            type="button"
+            onClick={onOpenFixturesImportModal}
+            className="min-h-[40px] px-3 py-1.5 text-xs font-bold bg-neutral-900 hover:bg-neutral-850 border border-neutral-750 hover:border-red-500 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+            title="Import official Leinster League match fixtures from Google Sheets"
+          >
+            <Trophy className="w-3.5 h-3.5 text-red-500" />
+            <span>Import Fixtures</span>
           </button>
         )}
 

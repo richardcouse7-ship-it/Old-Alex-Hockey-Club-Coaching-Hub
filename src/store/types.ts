@@ -32,6 +32,7 @@ export type ActiveModalType =
   | 'calendar_manager'
   | 'emergency_safety'
   | 'schedule_import'
+  | 'fixtures_import'
   | 'google_sync'
   | 'quick_score'
   | 'bulk_timings'

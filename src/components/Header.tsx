@@ -20,6 +20,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Archive,
+  Trophy,
 } from 'lucide-react';
 import { AppNotification } from '../types';
 import { SEASON_SUNDAYS } from '../data/seasonCalendar';
@@ -40,6 +41,7 @@ interface HeaderProps {
   onOpenCalendarManager?: () => void;
   onOpenEmergencyModal?: () => void;
   onOpenGoogleModal?: () => void;
+  onOpenFixturesImportModal?: () => void;
   isSunMode?: boolean;
   onToggleSunMode?: () => void;
   isSidebarCollapsed?: boolean;
@@ -61,6 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCalendarManager,
   onOpenEmergencyModal,
   onOpenGoogleModal,
+  onOpenFixturesImportModal,
   isSunMode = false,
   onToggleSunMode,
   isSidebarCollapsed = false,
@@ -241,6 +244,18 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Download className="w-3.5 h-3.5 text-red-400" />
             <span className="hidden md:inline">Export Hub</span>
+          </button>
+        )}
+
+        {onOpenFixturesImportModal && (
+          <button
+            type="button"
+            onClick={onOpenFixturesImportModal}
+            className="min-h-[44px] px-3 sm:px-3.5 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-sm active:scale-95 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 text-red-200 hover:text-white cursor-pointer"
+            title="Import Leinster League match fixtures from Google Sheets"
+          >
+            <Trophy className="w-3.5 h-3.5 text-red-400" />
+            <span className="hidden sm:inline">Import Fixtures</span>
           </button>
         )}
 

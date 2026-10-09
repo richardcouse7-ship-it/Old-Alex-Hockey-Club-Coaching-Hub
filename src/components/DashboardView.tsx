@@ -16,6 +16,7 @@ import {
   Upload,
   Wifi,
   WifiOff,
+  Trophy,
 } from 'lucide-react';
 import { Coach, Drill, PitchSector, ScheduleConflict, SessionSlot, SundayPrepChecklist } from '../types';
 import { PitchsideCockpitHUD } from './Dashboard/PitchsideCockpitHUD';
@@ -52,6 +53,7 @@ interface DashboardViewProps {
   onOpenReport: () => void;
   onOpenBroadcastModal: () => void;
   onOpenImportModal?: (initialText?: string) => void;
+  onOpenFixturesImportModal?: () => void;
   isOnline: boolean;
 }
 
@@ -75,6 +77,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenReport,
   onOpenBroadcastModal,
   onOpenImportModal,
+  onOpenFixturesImportModal,
   isOnline,
 }) => {
   const readySlotsCount = slots.filter((s) => s.status === 'Ready').length;
@@ -106,11 +109,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             type="button"
             onClick={() => onOpenImportModal?.()}
-            className="min-h-[44px] px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center gap-2 transition-all shadow-md active:scale-95"
+            className="min-h-[44px] px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
             title="Upload CSV / Excel schedule to autofill Sunday timetable"
           >
             <Upload className="w-4 h-4 text-white" />
             <span>Upload Schedule</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onOpenFixturesImportModal?.()}
+            className="min-h-[44px] px-4 py-2 text-xs font-bold bg-neutral-900 hover:bg-neutral-800 border border-neutral-750 text-white rounded-xl flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
+            title="Import official Leinster League match fixtures from Google Sheets"
+          >
+            <Trophy className="w-4 h-4 text-red-500" />
+            <span>Import Fixtures</span>
           </button>
 
           <button
@@ -195,6 +208,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Leinster Match Fixtures Google Sheet Sync Banner */}
+      {onOpenFixturesImportModal && (
+        <div className="bg-neutral-900/90 border border-neutral-750 p-4 sm:p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-600/20 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+              <Trophy className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white">Import Leinster Match Fixtures (Google Sheets)</h3>
+                <span className="text-[10px] font-mono-data bg-red-950/80 border border-red-600/60 text-red-400 px-2 py-0.5 rounded-full font-bold">
+                  Official League Matches
+                </span>
+              </div>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Sync all 45 Inter matches or 119 matches across Inters, Minors, 1st Years, and 6th Class directly from the club Google Sheet.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onOpenFixturesImportModal}
+              className="min-h-[44px] px-4 py-2 text-xs font-bold bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
+            >
+              <Trophy className="w-4 h-4" />
+              <span>Import Fixtures</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Live Sunday Pitchside Cockpit (Now & Next HUD) */}
       <PitchsideCockpitHUD
