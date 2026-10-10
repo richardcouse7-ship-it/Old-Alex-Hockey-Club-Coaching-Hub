@@ -89,6 +89,12 @@ export function syncWithMasterRoster(existingCoaches: Coach[], masterCoaches: Co
     if (trimmed === 'daisy dillon mansfield' || trimmed === 'daisy dillon malone') {
       return 'daisy dillon';
     }
+    if (trimmed === 'anya' || trimmed === 'anya bowyers') {
+      return 'anya';
+    }
+    if (trimmed === 'carmen meta' || trimmed === 'carmen-meta hayes') {
+      return 'carmen meta';
+    }
     return trimmed;
   };
 
@@ -100,6 +106,14 @@ export function syncWithMasterRoster(existingCoaches: Coach[], masterCoaches: Co
     if (!existingMap.has(key)) {
       merged.push(master);
       existingMap.set(key, master);
+    } else {
+      // If existing coach was single name or alias, update to official master name if fuller
+      const existing = existingMap.get(key);
+      if (existing && master.name.length > existing.name.length) {
+        existing.name = master.name;
+        if (master.initials) existing.initials = master.initials;
+        if (master.email) existing.email = master.email;
+      }
     }
   }
   return merged;

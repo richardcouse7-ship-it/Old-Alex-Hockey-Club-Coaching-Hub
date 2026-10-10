@@ -47,8 +47,8 @@ Away,Minor A,v Bray (Div 1),Temple Carrig,4:00pm,
 Away,Minor B,v Railway (Div 3),Park Ave,11:00am,
 Away,Minor C,v Loreto (Div 7),Loreto Beaufort,11:15am,BIBS and WHITE SOCKS`;
 
-// Exact raw tab-separated text corresponding to Richard's weekly master sheet screenshot
-export const SAMPLE_WEEKLY_SPREADSHEET_TEXT = `Date	Match/Team	Venue/Location	Assigned	Assigned Umpire/Coach	Assigned	Assigned	Assig	Assigned	Start Time	End Time	Total
+// Tab-separated text for Richard's weekly master sheet screenshots
+export const SAMPLE_WEEKLY_SPREADSHEET_TEXT_OCT4 = `Date	Match/Team	Venue/Location	Assigned	Assigned Umpire/Coach	Assigned	Assigned	Assig	Assigned	Start Time	End Time	Total
 4/10/2026	Inter A	Match V YMCA in Wesley	Richard Couse						13:30	15:30	
 4/10/2026	Inter B	Match V Pembroke (water)	Richard Couse	Nicola Wildish					10:15	12:00	
 4/10/2026	Inter C	Match V Clontarf in Mt Temple	Katie Mullan	Ref Provided					13:45	15:30	
@@ -76,6 +76,28 @@ export const SAMPLE_WEEKLY_SPREADSHEET_TEXT = `Date	Match/Team	Venue/Location	As
 	12 o'clock Floaters	Lauren Walsh						
 		Iris Fowler						
 		Eve O'Donnell						`;
+
+export const SAMPLE_WEEKLY_SPREADSHEET_TEXT_OCT11 = `Date	Match/Team	Venue/Location	Assigned	Assigned Umpire/Coach	Assigned	Assigned	Assig Assigned	Start Time	End Time
+11/10/2026	Inter	Training	Richard Couse	Grace MacAllister	Matt Salisbury			10:30	12:00
+11/10/2026	Inter	Training	Richard Couse	Josh Gill				14:14	15:45
+11/10/2026	Inter	Training	Violet O'Neill	Meabh Russell				14:15	15:30
+11/10/2026	Minor A	Away V Bray Templecarrig	Ben McInerney	Conor Ryan	Anya Bowyers			15:00	17:00
+11/10/2026	Minor B	Away V Railway Park Ave	Cara Coleman					10:15	12:00
+11/10/2026	Minor C	Away V Loreto (Bibs & White Socks)	Una Kelly	Nicola Wildish				10:30	12:15
+11/10/2026	1st Year	Training	Josh Gill	Jennifer Casey	Meabh Russell	Cara Coleman		13:00	14:15
+11/10/2026	6th Class A	Away V Pembroke Serpentine Ave	Ben McInerney	Jeremy Erwin	One to umpire.			10:15	12:00
+11/10/2026	6th Class B	Away V Our Ladys's Teneure	Katie Mullan	Natasha Nangle				10:40	12:10
+11/10/2026	6th Class C	Away V Glennae St Marks School	Daisy Dillon M...	Carmen-meta Hayes				10:45	12:15
+11/10/2026	5th Class	Training	John Walsh	Jessica Walsh	Violet O'Neill	Daisy Dillon Mal...		13:00	14:15
+11/10/2026	4th Class	Training	Josh Gill	Richard Couse	Grace MacAllister			12:00	13:00
+11/10/2026	3rd Class	Training	Joanna Lee	Cara Coleman	Eve Odonnell			12:00	13:00
+11/10/2026	2nd Class	Training	Meabh Russell	Violet O'Neill	Grace McKenna			12:00	13:00
+11/10/2026	1st Class	Training	Megan Marshall	Caoimhe Hardy	Emma Garry			12:00	13:00
+11/10/2026	Pen	Training	Babs Richmond	Jessica Walsh	Brooke Ellis			12:00	13:00
+
+	12 o'clock Floaters						`;
+
+export const SAMPLE_WEEKLY_SPREADSHEET_TEXT = SAMPLE_WEEKLY_SPREADSHEET_TEXT_OCT11;
 
 // Map raw team names to AgeGroup
 export function normalizeAgeGroup(raw: string): { ageGroup: AgeGroup; pathway: Pathway } {
@@ -206,6 +228,8 @@ export function isIgnoredCoachName(name: string): boolean {
     lower.includes('ref provided') ||
     lower.includes('referee provided') ||
     lower.includes('umpire provided') ||
+    lower.includes('to umpire') ||
+    lower.includes('one to umpire') ||
     lower === 'ref' ||
     lower === 'referee' ||
     lower === 'umpire' ||
@@ -486,12 +510,16 @@ export function parseSpreadsheetSchedule(
 
     // Known club coaching names mapping
     let resolvedName = cleaned;
-    if (/^daisy dillon/i.test(cleaned)) {
+    if (/^daisy dillon mansfield/i.test(cleaned)) {
       resolvedName = 'Daisy Dillon Mansfield';
+    } else if (/^daisy dillon/i.test(cleaned)) {
+      resolvedName = 'Daisy Dillon Malone';
     } else if (/^carmen[- ]?meta/i.test(cleaned)) {
-      resolvedName = 'Carmen Meta';
+      resolvedName = 'Carmen-meta Hayes';
     } else if (/^hannah fox/i.test(cleaned)) {
       resolvedName = 'Hannah Fox';
+    } else if (/^anya bowyers/i.test(cleaned) || cleaned.toLowerCase() === 'anya') {
+      resolvedName = 'Anya Bowyers';
     }
 
     const resolvedNorm = resolvedName.toLowerCase();

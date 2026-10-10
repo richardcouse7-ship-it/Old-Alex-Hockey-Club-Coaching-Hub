@@ -7,6 +7,8 @@ import {
   cleanCoachName,
   isValidCoachPersonName,
   SAMPLE_WEEKLY_SPREADSHEET_TEXT,
+  SAMPLE_WEEKLY_SPREADSHEET_TEXT_OCT4,
+  SAMPLE_WEEKLY_SPREADSHEET_TEXT_OCT11,
 } from '../scheduleImportParser';
 import { COACHES } from '../../data/initialData';
 
@@ -90,8 +92,8 @@ describe('scheduleImportParser', () => {
   });
 
   describe('Screenshot Weekly Schedule Parsing', () => {
-    it('parses Richard screenshot master spreadsheet accurately', () => {
-      const result = parseSpreadsheetSchedule(SAMPLE_WEEKLY_SPREADSHEET_TEXT, COACHES, '2026-09-13');
+    it('parses Richard screenshot master spreadsheet accurately (4 Oct 2026)', () => {
+      const result = parseSpreadsheetSchedule(SAMPLE_WEEKLY_SPREADSHEET_TEXT_OCT4, COACHES, '2026-09-13');
 
       // 1. Check Date Auto-Detection
       expect(result.detectedDate).toBe('2026-10-04');
@@ -201,6 +203,85 @@ Minor	Training	Ben McInerney	Conor Ryan	14:30	15:15`;
       expect(result.slots[0].venueName).toBe('Wesley College');
       expect(result.rows[1].rawTeam).toBe('Minor');
       expect(result.slots[1].isAway).toBeFalsy();
+    });
+
+    it('parses Richard screenshot master spreadsheet for 11 Oct 2026 accurately', () => {
+      const result = parseSpreadsheetSchedule(SAMPLE_WEEKLY_SPREADSHEET_TEXT_OCT11, COACHES, '2026-09-13');
+
+      // 1. Date Detection
+      expect(result.detectedDate).toBe('2026-10-11');
+
+      // 2. Total Sessions Parsed (16 rows)
+      expect(result.rows.length).toBe(16);
+      expect(result.slots.length).toBe(16);
+      expect(result.slots.every((s) => s.date === '2026-10-11')).toBe(true);
+
+      // 3. Away Matches (6 away sessions)
+      const awaySlots = result.slots.filter((s) => s.isAway);
+      expect(awaySlots.length).toBe(6);
+
+      // Minor A Away vs Bray
+      const minorA = result.slots.find((s) => s.sessionTitle.includes('Minor A'));
+      expect(minorA).toBeDefined();
+      expect(minorA?.isAway).toBe(true);
+      expect(minorA?.startTime).toBe('15:00');
+      expect(minorA?.endTime).toBe('17:00');
+      expect(minorA?.meetTime).toBe('14:15');
+
+      // Minor B Away vs Railway
+      const minorB = result.slots.find((s) => s.sessionTitle.includes('Minor B'));
+      expect(minorB).toBeDefined();
+      expect(minorB?.isAway).toBe(true);
+      expect(minorB?.startTime).toBe('10:15');
+      expect(minorB?.meetTime).toBe('09:30');
+
+      // Minor C Away vs Loreto
+      const minorC = result.slots.find((s) => s.sessionTitle.includes('Minor C'));
+      expect(minorC).toBeDefined();
+      expect(minorC?.isAway).toBe(true);
+      expect(minorC?.startTime).toBe('10:30');
+      expect(minorC?.meetTime).toBe('09:45');
+
+      // 6th Class A Away vs Pembroke
+      const sixthA = result.slots.find((s) => s.sessionTitle.includes('6th Class A'));
+      expect(sixthA).toBeDefined();
+      expect(sixthA?.isAway).toBe(true);
+      expect(sixthA?.startTime).toBe('10:15');
+      // "One to umpire." should NOT be parsed as coach
+      expect(sixthA?.assignedCoachIds.some((id) => id.includes('umpire'))).toBe(false);
+
+      // 6th Class B Away vs Our Lady's
+      const sixthB = result.slots.find((s) => s.sessionTitle.includes('6th Class B'));
+      expect(sixthB).toBeDefined();
+      expect(sixthB?.isAway).toBe(true);
+      expect(sixthB?.startTime).toBe('10:40');
+
+      // 6th Class C Away vs Glenanne
+      const sixthC = result.slots.find((s) => s.sessionTitle.includes('6th Class C'));
+      expect(sixthC).toBeDefined();
+      expect(sixthC?.isAway).toBe(true);
+      expect(sixthC?.startTime).toBe('10:45');
+
+      // 4. Home sessions (10 sessions)
+      const homeSlots = result.slots.filter((s) => !s.isAway);
+      expect(homeSlots.length).toBe(10);
+
+      // 12:00 Foundation block
+      const penSlot = homeSlots.find((s) => s.ageGroupId === 'PEN');
+      expect(penSlot?.pitchSectorId).toBe('p3');
+      expect(penSlot?.startTime).toBe('12:00');
+
+      const firstClass = homeSlots.find((s) => s.ageGroupId === '1st Class');
+      expect(firstClass?.startTime).toBe('12:00');
+
+      const secondClass = homeSlots.find((s) => s.ageGroupId === '2nd Class');
+      expect(secondClass?.startTime).toBe('12:00');
+
+      const thirdClass = homeSlots.find((s) => s.ageGroupId === '3rd Class');
+      expect(thirdClass?.startTime).toBe('12:00');
+
+      const fourthClass = homeSlots.find((s) => s.ageGroupId === '4th Class');
+      expect(fourthClass?.startTime).toBe('12:00');
     });
   });
 
